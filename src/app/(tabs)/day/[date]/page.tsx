@@ -36,7 +36,7 @@ const SLOTS: { slot: Slot; icon: string; name: string }[] = [
 
 const HINTS = ["大事にしたかったこと", "できたこと", "改善を実感したこと"];
 
-// 書いた人の色（退出した人は灰色）
+// 書いた人の色（退出した人は灰色）。名前と細い線にだけ使い、本文は通常の文字色
 function colorOf(member: Member | undefined) {
   return member && !member.left_at && member.color ? `var(--member-${member.color})` : "var(--member-left)";
 }
@@ -201,7 +201,7 @@ function ReflectionCard({ reflection, members, myId, onEdit, onDelete, onAddNote
   const author = members.get(reflection.author_id);
   const isMine = reflection.author_id === myId;
   return (
-    <article className="rounded-3xl border border-border bg-surface p-4" style={{ borderLeft: `6px solid ${colorOf(author)}` }}>
+    <article className="rounded-3xl border border-border bg-surface p-4" style={{ borderLeft: `2px solid ${colorOf(author)}` }}>
       <header className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <MemberName member={author} />
         <span className="text-xs text-muted">
@@ -209,7 +209,7 @@ function ReflectionCard({ reflection, members, myId, onEdit, onDelete, onAddNote
           {reflection.updated_at !== reflection.created_at && "（直しました）"}
         </span>
       </header>
-      <p className="whitespace-pre-wrap leading-relaxed" style={{ color: colorOf(author) }}>{reflection.body}</p>
+      <p className="whitespace-pre-wrap leading-relaxed">{reflection.body}</p>
       {isMine && (
         <div className="mt-2 flex gap-2">
           <SmallButton onClick={onEdit}>直す</SmallButton>
@@ -222,12 +222,12 @@ function ReflectionCard({ reflection, members, myId, onEdit, onDelete, onAddNote
           {reflection.reflection_notes.map((note) => {
             const writer = members.get(note.author_id);
             return (
-              <li key={note.id} className="rounded-2xl bg-bg px-3 py-2">
+              <li key={note.id} className="rounded-2xl bg-bg px-3 py-2" style={{ borderLeft: `2px solid ${colorOf(writer)}` }}>
                 <p className="text-sm">
                   <MemberName member={writer} />
                   <span className="text-muted">　追記 {formatTime(note.created_at)}</span>
                 </p>
-                <p className="mt-1 whitespace-pre-wrap leading-relaxed" style={{ color: colorOf(writer) }}>{note.body}</p>
+                <p className="mt-1 whitespace-pre-wrap leading-relaxed">{note.body}</p>
                 {note.author_id === myId && (
                   <div className="mt-1 flex gap-2">
                     <SmallButton onClick={() => onEditNote(note)}>直す</SmallButton>
@@ -365,7 +365,7 @@ function NoteSheet({ reflection, note, members, onClose, onSaved }: {
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div className="max-h-40 overflow-y-auto rounded-2xl bg-surface p-3 text-sm">
           <MemberName member={author} />
-          <p className="mt-1 whitespace-pre-wrap" style={{ color: colorOf(author) }}>{reflection.body}</p>
+          <p className="mt-1 whitespace-pre-wrap">{reflection.body}</p>
         </div>
         <TextArea
           id="note-body"
