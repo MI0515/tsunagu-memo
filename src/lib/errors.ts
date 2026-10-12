@@ -8,18 +8,28 @@ const MESSAGES: Record<string, string> = {
   expired_invite: "この招待リンクは期限が切れています。ルームの作成者に、新しいリンクをお願いしてください。",
   room_full: "このルームは人数の上限に達しています。",
   not_owner: "この操作は、ルームの作成者だけができます。",
+  not_member: "このルームのメンバーではないため、操作できません。",
   not_signed_in: "準備がうまくいきませんでした。ページを読み込み直してください。",
   rate_limited: "短いあいだに何度も試されたため、少し待ってから試してください。",
   signin_failed: "準備がうまくいきませんでした。通信の状態を確かめて、もう一度試してください。",
-  item_limit: "今日はこれ以上、項目を追加できません。明日また追加してください。",
+  limit_reached: "数の上限に達しているため、これ以上追加できません。",
+  too_long: "文字数が多すぎます。短くしてください。",
   not_found: "見つかりませんでした。ほかの人が先に消したのかもしれません。",
-  network:"通信がうまくいきませんでした。電波の状態を確かめて、もう一度試してください。",
+  network: "通信がうまくいきませんでした。電波の状態を確かめて、もう一度試してください。",
 };
 
 export class AppError extends Error {
   constructor(public code: string) {
     super(code);
   }
+}
+
+// Supabase のエラーを、画面で使う合言葉にそろえる
+export function toAppError(error: { code?: string; message?: string }): AppError {
+  const message = error.message ?? "";
+  if (message.includes("limit_reached")) return new AppError("limit_reached");
+  if (error.code === "23514") return new AppError("too_long"); // 文字数などの決まりに合わない
+  return new AppError(message || "unknown");
 }
 
 export function errorMessage(e: unknown): string {

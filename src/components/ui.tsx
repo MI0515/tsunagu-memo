@@ -5,9 +5,16 @@ import { type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } f
 import { tapFeedback } from "@/lib/feedback";
 
 // 画面全体の枠（スマホの幅に合わせ、ノッチ部分を避ける）
-export function Page({ children }: { children: ReactNode }) {
+// withTabs の時は、下のタブに隠れないように下側を広く空ける
+export function Page({ children, withTabs = false }: { children: ReactNode; withTabs?: boolean }) {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]">
+    <main
+      className={`mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-5 pt-[max(1.5rem,env(safe-area-inset-top))] ${
+        withTabs
+          ? "pb-[calc(6rem+env(safe-area-inset-bottom))]"
+          : "pb-[max(2rem,env(safe-area-inset-bottom))]"
+      }`}
+    >
       {children}
     </main>
   );
@@ -119,6 +126,36 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
         {children}
       </div>
     </div>
+  );
+}
+
+// 削除などの前に出す確認。「削除」「キャンセル」の2つだけ
+export function ConfirmSheet({
+  title,
+  message,
+  confirmLabel = "削除",
+  busy,
+  error,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  message: ReactNode;
+  confirmLabel?: string;
+  busy?: boolean;
+  error?: string | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Sheet title={title} onClose={onCancel}>
+      <div className="flex flex-col gap-4">
+        <div>{message}</div>
+        {error && <Alert>{error}</Alert>}
+        <Button onClick={onConfirm} loading={busy}>{confirmLabel}</Button>
+        <Button variant="soft" onClick={onCancel}>キャンセル</Button>
+      </div>
+    </Sheet>
   );
 }
 

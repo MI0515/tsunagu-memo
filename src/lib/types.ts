@@ -1,39 +1,26 @@
-export type ItemKind = "once" | "daily" | "weekly" | "monthly";
-
-export type Item = {
+export type Memo = {
   id: string;
   room_id: string;
   title: string;
-  kind: ItemKind;
-  date: string | null;
-  weekdays: number[] | null;
-  month_day: number | null;
-  starts_on: string;
-  ends_on: string | null;
   position: number;
   created_at: string;
 };
 
-export type StampKind = "check" | "eyes" | "pray" | "heart";
+export type MemoSummary = Memo & { item_count: number };
 
-export type Stamp = {
-  item_id: string;
-  date: string;
-  user_id: string;
-  kind: StampKind;
+export type MemoItem = {
+  id: string;
+  memo_id: string;
   room_id: string;
+  body: string;
+  position: number;
   created_at: string;
 };
 
-export type Member = {
-  user_id: string;
-  display_name: string;
-  role: "owner" | "member";
-};
-
-export const STAMPS: { kind: StampKind; emoji: string; label: string }[] = [
-  { kind: "check", emoji: "✅", label: "できた" },
-  { kind: "eyes", emoji: "👀", label: "見たよ" },
-  { kind: "pray", emoji: "🙏", label: "おねがい" },
-  { kind: "heart", emoji: "💙", label: "ありがとう" },
-];
+// 文字数・数の上限（データベースの決まりと同じ）
+export const LIMITS = {
+  memoTitle: 30,
+  memoItem: 80,
+  memosPerRoom: 10,
+  itemsPerMemo: 30,
+} as const;

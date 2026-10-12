@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Alert, AppTitle, Button, Card, Field, Loading, Page } from "@/components/ui";
 import { useCaptcha } from "@/components/captcha";
+import { saveLastRoom } from "@/components/rooms";
 import { createRoom, ensureSession, getAppInfo } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 
@@ -34,6 +35,7 @@ export default function CreateRoomPage() {
     try {
       await ensureSession(captcha.token);
       const { room_id } = await createRoom(roomName.trim(), displayName.trim(), needsCode ? code.trim() : null);
+      saveLastRoom(room_id);
       router.replace(`/invite/${room_id}?new=1`);
     } catch (err) {
       setError(errorMessage(err));

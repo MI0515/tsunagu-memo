@@ -1,15 +1,15 @@
 "use client";
 
 import { getSupabase } from "./supabase";
-import { AppError } from "./errors";
-import type { Item, ItemKind, Member, Stamp } from "./types";
+import { AppError, toAppError } from "./errors";
+import type { Memo, MemoItem, MemoSummary } from "./types";
 
 type Result<T> = ({ ok: true } & T) | { ok: false; error: string };
 
 // DB関数を呼び、{ok:false} ならエラーとして投げる
 async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const { data, error } = await getSupabase().rpc(fn, args);
-  if (error) throw new AppError(error.message || "unknown");
+  if (error) throw toAppError(error);
   const result = data as Result<T>;
   if (result && typeof result === "object" && "ok" in result && !result.ok) {
     throw new AppError(result.error);
@@ -75,66 +75,75 @@ export async function listMyRooms(): Promise<MyRoom[]> {
     .select("role, display_name, rooms(id, name, last_activity_at)")
     .eq("user_id", uid)
     .order("joined_at");
-  if (error) throw new AppError(error.message);
+  if (error) throw toAppError(error);
   return (data ?? []).flatMap((m) => {
     const room = m.rooms as unknown as { id: string; name: string; last_activity_at: string } | null;
     return room ? [{ ...room, role: m.role, display_name: m.display_name }] : [];
   });
 }
 
-// ある日のルームの様子（項目・スタンプ・メンバー）
-export async function loadRoomDay(roomId: string, date: string) {
+// ---------------------------------------------------------------
+// メモ
+// ---------------------------------------------------------------
+export async function listMemos(roomId: string): Promise<MemoSummary[]> {
+  const { data, error } = await getSupabase()
+    .from("memos")
+    .select("id, room_id, title, position, created_at, memo_items(count)")
+    .eq("room_id", roomId)
+    .order("position")
+    .order("created_at");
+  if (error) throw toAppError(error);
+  return (data ?? []).map(({ memo_items, ...memo }) => ({
+    ...memo,
+    item_count: (memo_items as unknown as { count: number }[])[0]?.count ?? 0,
+  }));
+}
+
+// メモと、その項目（見つからない時は null）
+export async function getMemo(memoId: string): Promise<{ memo: Memo; items: MemoItem[] } | null> {
   const sb = getSupabase();
-  const [items, stamps, members] = await Promise.all([
-    sb.rpc("items_on", { p_room_id: roomId, p_date: date }),
-    sb.from("stamps").select("*").eq("room_id", roomId).eq("date", date).order("created_at"),
-    sb.from("room_members").select("user_id, display_name, role").eq("room_id", roomId).order("joined_at"),
+  const [memo, items] = await Promise.all([
+    sb.from("memos").select("id, room_id, title, position, created_at").eq("id", memoId).maybeSingle(),
+    sb.from("memo_items").select("id, memo_id, room_id, body, position, created_at")
+      .eq("memo_id", memoId).order("position").order("created_at"),
   ]);
-  const error = items.error ?? stamps.error ?? members.error;
-  if (error) throw new AppError(error.message);
-  return {
-    items: (items.data ?? []) as Item[],
-    stamps: (stamps.data ?? []) as Stamp[],
-    members: (members.data ?? []) as Member[],
-  };
+  const error = memo.error ?? items.error;
+  if (error) throw toAppError(error);
+  return memo.data ? { memo: memo.data, items: items.data ?? [] } : null;
 }
 
-export async function addStamp(stamp: Omit<Stamp, "created_at">) {
-  const { error } = await getSupabase().from("stamps").insert(stamp);
-  // 2回続けて押した時の重複は、押せているので成功扱い
-  if (error && error.code !== "23505") throw new AppError(error.message);
+export async function createMemo(roomId: string, title: string, position: number): Promise<string> {
+  const { data, error } = await getSupabase()
+    .from("memos").insert({ room_id: roomId, title, position }).select("id").single();
+  if (error) throw toAppError(error);
+  return data.id;
 }
 
-export async function removeStamp(s: Pick<Stamp, "item_id" | "date" | "user_id" | "kind">) {
+export async function renameMemo(memoId: string, title: string) {
+  const { error } = await getSupabase().from("memos").update({ title }).eq("id", memoId);
+  if (error) throw toAppError(error);
+}
+
+export async function deleteMemo(memoId: string) {
+  const { error } = await getSupabase().from("memos").delete().eq("id", memoId);
+  if (error) throw toAppError(error);
+}
+
+export async function addMemoItem(memo: Memo, body: string, position: number) {
   const { error } = await getSupabase()
-    .from("stamps")
-    .delete()
-    .match({ item_id: s.item_id, date: s.date, user_id: s.user_id, kind: s.kind });
-  if (error) throw new AppError(error.message);
+    .from("memo_items").insert({ memo_id: memo.id, room_id: memo.room_id, body, position });
+  if (error) throw toAppError(error);
 }
 
-export type NewItem = {
-  room_id: string;
-  title: string;
-  kind: ItemKind;
-  date?: string;
-  weekdays?: number[];
-  month_day?: number;
-  position: number;
-};
-
-export async function addItem(item: NewItem) {
-  const uid = await currentUserId();
-  const { error } = await getSupabase().from("items").insert({ ...item, created_by: uid });
-  if (error) throw new AppError(error.message.includes("item_limit") ? "item_limit" : error.message);
+export async function updateMemoItem(itemId: string, body: string) {
+  const { error } = await getSupabase().from("memo_items").update({ body }).eq("id", itemId);
+  if (error) throw toAppError(error);
 }
 
-export async function renameItem(itemId: string, title: string) {
-  const { error } = await getSupabase().from("items").update({ title }).eq("id", itemId);
-  if (error) throw new AppError(error.message);
+export async function deleteMemoItem(itemId: string) {
+  const { error } = await getSupabase().from("memo_items").delete().eq("id", itemId);
+  if (error) throw toAppError(error);
 }
-
-export const removeItem = (itemId: string) => rpc<object>("remove_item", { p_item_id: itemId });
 
 export type ActiveInvite = { token: string; expires_at: string } | null;
 
@@ -149,7 +158,7 @@ export async function getActiveInvite(roomId: string): Promise<ActiveInvite> {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) throw new AppError(error.message);
+  if (error) throw toAppError(error);
   return data;
 }
 

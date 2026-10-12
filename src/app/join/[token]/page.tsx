@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Alert, AppTitle, Button, Card, Field, LinkButton, Loading, Page } from "@/components/ui";
 import { useCaptcha } from "@/components/captcha";
+import { saveLastRoom } from "@/components/rooms";
 import { ensureSession, getInviteInfo, joinRoom } from "@/lib/api";
 import { AppError, errorMessage } from "@/lib/errors";
 
@@ -40,7 +41,8 @@ export default function JoinPage() {
     setError(null);
     try {
       await ensureSession(captcha.token);
-      await joinRoom(token, displayName.trim());
+      const { room_id } = await joinRoom(token, displayName.trim());
+      saveLastRoom(room_id);
       router.replace("/");
     } catch (err) {
       setError(errorMessage(err));
