@@ -16,6 +16,11 @@ export default function MemosPage() {
   const [memos, setMemos] = useState<MemoSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [selecting, setSelecting] = useState(false);
+
+  useEffect(() => {
+    setSelecting(new URLSearchParams(window.location.search).get("mode") === "select");
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -39,6 +44,9 @@ export default function MemosPage() {
   return (
     <>
       <h1 className="text-2xl font-bold">メモ</h1>
+      {selecting && (
+        <p className="rounded-2xl bg-primary-soft px-4 py-3">思い出したい項目があるメモを開いて、選んでください。</p>
+      )}
       {error && <Alert>{error}</Alert>}
 
       {!memos ? (
@@ -52,7 +60,7 @@ export default function MemosPage() {
           {memos.map((memo) => (
             <li key={memo.id}>
               <Link
-                href={`/memos/${memo.id}`}
+                href={`/memos/${memo.id}${selecting ? "?mode=select" : ""}`}
                 onClick={tapFeedback}
                 className="flex items-center gap-3 rounded-3xl border-2 border-border bg-surface p-5 transition-transform active:scale-[0.98]"
               >

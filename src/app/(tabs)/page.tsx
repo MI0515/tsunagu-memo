@@ -46,6 +46,11 @@ export default function TodayPage() {
 
   useRealtime(room.id, ["day_entries", "checks", "room_members"], load);
 
+  // メモから「明日に追加」したあとは、明日の確認リストを開く
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("day") === "tomorrow") setWhich("tomorrow");
+  }, []);
+
   const members = useMemo(() => new Map((day?.members ?? []).map((m) => [m.user_id, m])), [day?.members]);
 
   // スタンプは押した瞬間に画面へ反映し、保存に失敗したら元に戻す
@@ -151,7 +156,7 @@ export default function TodayPage() {
 
       {day && (
         <div className="flex flex-col items-center gap-2">
-          <LinkButton href="/memos">メモから選ぶ</LinkButton>
+          <LinkButton href="/memos?mode=select">メモから選ぶ</LinkButton>
           <button
             onClick={() => {
               tapFeedback();

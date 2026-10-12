@@ -191,6 +191,35 @@ export async function deleteEntry(entryId: string) {
   if (error) throw toAppError(error);
 }
 
+// ---------------------------------------------------------------
+// 選んで追加
+// ---------------------------------------------------------------
+export const addToDay = (roomId: string, date: string, memoItemIds: string[]) =>
+  rpc<{ added: number; skipped: number }>("add_to_day", {
+    p_room_id: roomId,
+    p_date: date,
+    p_memo_item_ids: memoItemIds,
+  });
+
+// 前回選んだメモ項目のID
+export async function lastSelection(roomId: string): Promise<string[]> {
+  const { data, error } = await getSupabase().rpc("last_selection", { p_room_id: roomId });
+  if (error) throw toAppError(error);
+  return (data ?? []) as string[];
+}
+
+// 今日・明日の確認リストに、すでに入っているメモ項目
+export async function memoItemsInDays(roomId: string, dates: string[]) {
+  const { data, error } = await getSupabase()
+    .from("day_entries")
+    .select("date, memo_item_id")
+    .eq("room_id", roomId)
+    .in("date", dates)
+    .not("memo_item_id", "is", null);
+  if (error) throw toAppError(error);
+  return (data ?? []) as { date: string; memo_item_id: string }[];
+}
+
 export type ActiveInvite = { token: string; expires_at: string } | null;
 
 // いま使える招待リンク（オーナーだけが読める）

@@ -5,11 +5,17 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Alert, Button, ConfirmSheet, Field, LinkButton, Loading, Sheet } from "@/components/ui";
 import { useRoom } from "@/components/rooms";
-import { addMemoItem, deleteMemo, deleteMemoItem, getMemo, renameMemo, updateMemoItem } from "@/lib/api";
+import {
+  addMemoItem, addToDay, deleteMemo, deleteMemoItem, getMemo, lastSelection, memoItemsInDays, renameMemo, updateMemoItem,
+} from "@/lib/api";
+import { addDays } from "@/lib/date";
 import { errorMessage } from "@/lib/errors";
 import { copyText, tapFeedback } from "@/lib/feedback";
 import { LIMITS, type Memo, type MemoItem } from "@/lib/types";
 import { useRealtime } from "@/lib/useRealtime";
+import { useToday } from "@/lib/useToday";
+
+type Mode = "read" | "select" | "edit";
 
 type Panel =
   | { kind: "add" }
@@ -18,31 +24,46 @@ type Panel =
   | { kind: "delete-memo" }
   | null;
 
+type Notice = { text: string; link?: { href: string; label: string } };
+
 export default function MemoPage() {
   const { memoId } = useParams<{ memoId: string }>();
   const { room } = useRoom();
   const router = useRouter();
+  const today = useToday();
+  const tomorrow = addDays(today, 1);
   const [data, setData] = useState<{ memo: Memo; items: MemoItem[] } | null | undefined>(undefined);
+  const [inDays, setInDays] = useState<{ date: string; memo_item_id: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
+  const [mode, setMode] = useState<Mode>("read");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [busy, setBusy] = useState<"today" | "tomorrow" | "last" | null>(null);
   const [panel, setPanel] = useState<Panel>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     try {
-      setData(await getMemo(memoId));
+      const [memo, days] = await Promise.all([getMemo(memoId), memoItemsInDays(room.id, [today, tomorrow])]);
+      setData(memo);
+      setInDays(days);
       setError(null);
     } catch (e) {
       setError(errorMessage(e));
     }
-  }, [memoId]);
+  }, [memoId, room.id, today, tomorrow]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  useRealtime(room.id, ["memos", "memo_items"], load);
+  useRealtime(room.id, ["memos", "memo_items", "day_entries"], load);
+
+  // 「今日」タブの「メモから選ぶ」から来た時は、はじめから選ぶ状態にする
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("mode") === "select") setMode("select");
+  }, []);
 
   // 上でルームを切り替えたら、そのルームのメモ一覧へ
   const firstRoom = useRef(room.id);
@@ -50,12 +71,27 @@ export default function MemoPage() {
     if (room.id !== firstRoom.current) router.replace("/memos");
   }, [room.id, router]);
 
-  async function copy(item: MemoItem) {
-    if (await copyText(item.body)) {
-      setCopiedId(item.id);
-      if (copiedTimer.current) clearTimeout(copiedTimer.current);
-      copiedTimer.current = setTimeout(() => setCopiedId(null), 1500);
-    }
+  function changeMode(next: Mode) {
+    tapFeedback();
+    setMode(next);
+    setSelected(new Set());
+    setNotice(null);
+  }
+
+  function flash(id: string) {
+    setCopiedId(id);
+    if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setCopiedId(null), 1500);
+  }
+
+  function toggleSelect(id: string) {
+    setNotice(null);
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   if (data === undefined) return error ? <Alert>{error}</Alert> : <Loading />;
@@ -70,30 +106,74 @@ export default function MemoPage() {
 
   const { memo, items } = data;
   const nextPosition = Math.max(0, ...items.map((i) => i.position)) + 1;
+  const numberOf = new Map(items.map((item, index) => [item.id, index + 1]));
+  const chosen = items.filter((i) => selected.has(i.id));
+
+  async function add(which: "today" | "tomorrow") {
+    setBusy(which);
+    setError(null);
+    try {
+      const result = await addToDay(room.id, which === "today" ? today : tomorrow, chosen.map((i) => i.id));
+      const label = which === "today" ? "今日" : "明日";
+      const text =
+        result.added > 0
+          ? `${label}の確認リストに${result.added}件追加しました。` +
+            (result.skipped > 0 ? `（${result.skipped}件は、すでに入っていました）` : "")
+          : `選んだ項目は、すべて${label}の確認リストに入っています。`;
+      setNotice({ text, link: { href: which === "today" ? "/" : "/?day=tomorrow", label: `${label}の確認リストを見る` } });
+      setSelected(new Set());
+      load();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function selectLast() {
+    tapFeedback();
+    setBusy("last");
+    setError(null);
+    try {
+      const last = new Set(await lastSelection(room.id));
+      const here = items.filter((i) => last.has(i.id)).map((i) => i.id);
+      setSelected(new Set(here));
+      setNotice(here.length === 0 ? { text: "このメモには、前回選んだ項目がありません。" } : null);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function copyChosen() {
+    const text = chosen.map((i) => `${numberOf.get(i.id)}. ${i.body}`).join("\n");
+    if (await copyText(text)) setNotice({ text: `選んだ${chosen.length}件をコピーしました。` });
+  }
+
+  const hint = {
+    read: "項目をタップすると、コピーできます。",
+    select: "思い出したい項目をタップして選んでください。",
+    edit: "直したい項目をタップしてください。",
+  }[mode];
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-2">
         <Link href="/memos" className="min-h-11 py-2 text-primary">‹ メモ一覧</Link>
-        <button
-          onClick={() => {
-            tapFeedback();
-            setEditing((v) => !v);
-          }}
-          aria-pressed={editing}
-          className={`min-h-11 rounded-full border-2 px-4 font-bold transition-colors active:scale-95 ${
-            editing ? "border-primary bg-primary text-on-primary" : "border-border text-primary"
-          }`}
-        >
-          {editing ? "編集を終える" : "編集する"}
-        </button>
+        {mode === "read" ? (
+          <div className="flex gap-2">
+            <ModeButton onClick={() => changeMode("select")}>選ぶ</ModeButton>
+            <ModeButton onClick={() => changeMode("edit")}>編集する</ModeButton>
+          </div>
+        ) : (
+          <ModeButton active onClick={() => changeMode("read")}>{mode === "select" ? "選ぶのをやめる" : "編集を終える"}</ModeButton>
+        )}
       </div>
 
       <div>
         <h1 className="text-2xl font-bold leading-snug">{memo.title}</h1>
-        <p className="mt-1 text-sm text-muted">
-          {editing ? "直したい項目をタップしてください。" : "項目をタップすると、コピーできます。"}
-        </p>
+        <p className="mt-1 text-sm text-muted">{hint}</p>
       </div>
 
       {error && <Alert>{error}</Alert>}
@@ -106,22 +186,38 @@ export default function MemoPage() {
         <ol className="flex flex-col gap-2">
           {items.map((item, index) => {
             const copied = copiedId === item.id;
+            const isSelected = mode === "select" && selected.has(item.id);
+            const days = inDays.filter((d) => d.memo_item_id === item.id).map((d) => (d.date === today ? "今日" : "明日"));
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     tapFeedback();
-                    if (editing) setPanel({ kind: "edit-item", item, number: index + 1 });
-                    else copy(item);
+                    if (mode === "edit") setPanel({ kind: "edit-item", item, number: index + 1 });
+                    else if (mode === "select") toggleSelect(item.id);
+                    else if (await copyText(item.body)) flash(item.id);
                   }}
+                  aria-pressed={mode === "select" ? isSelected : undefined}
                   className={`flex w-full items-start gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-colors active:scale-[0.99] ${
-                    copied ? "border-primary bg-primary-soft" : editing ? "border-dashed border-border bg-bg" : "border-transparent bg-surface"
+                    copied || isSelected
+                      ? "border-primary bg-primary-soft"
+                      : mode === "edit" ? "border-dashed border-border bg-bg" : "border-transparent bg-surface"
                   }`}
                 >
+                  {mode === "select" && <SelectMark on={isSelected} />}
                   <span className="min-w-[1.75rem] font-bold text-primary">{index + 1}.</span>
-                  <span className="flex-1 leading-relaxed">{item.body}</span>
+                  <span className="flex-1 leading-relaxed">
+                    {item.body}
+                    {days.length > 0 && (
+                      <span className="mt-1 flex gap-1">
+                        {days.sort().reverse().map((d) => (
+                          <span key={d} className="rounded-full bg-bg px-2 text-xs text-muted">{d}のリストに入っています</span>
+                        ))}
+                      </span>
+                    )}
+                  </span>
                   {copied && <span className="shrink-0 text-sm font-bold text-primary">✓ コピーしました</span>}
-                  {editing && <span aria-hidden className="shrink-0 text-muted">✎</span>}
+                  {mode === "edit" && <span aria-hidden className="shrink-0 text-muted">✎</span>}
                 </button>
               </li>
             );
@@ -129,7 +225,38 @@ export default function MemoPage() {
         </ol>
       )}
 
-      {editing && (
+      {mode === "select" && items.length > 0 && (
+        <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 flex flex-col gap-3 rounded-3xl border border-border bg-bg p-4 shadow-lg">
+          {notice && (
+            <div className="rounded-2xl bg-primary-soft px-4 py-3">
+              <p>{notice.text}</p>
+              {notice.link && (
+                <Link href={notice.link.href} className="font-bold text-primary underline underline-offset-4">
+                  {notice.link.label}
+                </Link>
+              )}
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-bold">{chosen.length}件選択中</p>
+            <div className="flex gap-1">
+              <SmallButton onClick={selectLast} disabled={busy !== null}>前回と同じ</SmallButton>
+              <SmallButton onClick={() => setSelected(new Set())} disabled={chosen.length === 0}>選択を解除</SmallButton>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button onClick={() => add("today")} loading={busy === "today"} disabled={chosen.length === 0 || busy !== null}>
+              今日に追加
+            </Button>
+            <Button variant="soft" onClick={() => add("tomorrow")} loading={busy === "tomorrow"} disabled={chosen.length === 0 || busy !== null}>
+              明日に追加
+            </Button>
+          </div>
+          <SmallButton onClick={copyChosen} disabled={chosen.length === 0}>選んだ項目をコピー</SmallButton>
+        </div>
+      )}
+
+      {mode === "edit" && (
         <div className="flex flex-col gap-3">
           {items.length >= LIMITS.itemsPerMemo ? (
             <p className="text-center text-sm text-muted">1つのメモの項目は{LIMITS.itemsPerMemo}個までです。</p>
@@ -157,6 +284,53 @@ export default function MemoPage() {
         />
       )}
     </>
+  );
+}
+
+function ModeButton({ active = false, onClick, children }: { active?: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      className={`min-h-11 rounded-full border-2 px-4 font-bold transition-colors active:scale-95 ${
+        active ? "border-primary bg-primary text-on-primary" : "border-border text-primary"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SmallButton({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={() => {
+        tapFeedback();
+        onClick();
+      }}
+      disabled={disabled}
+      className="min-h-11 rounded-full px-3 text-sm font-bold text-primary active:bg-surface disabled:opacity-40"
+    >
+      {children}
+    </button>
+  );
+}
+
+// 選んだかどうかの印（丸）。選んだ時は塗りつぶして、中に小さな印
+function SelectMark({ on }: { on: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+        on ? "border-primary bg-primary text-on-primary" : "border-border bg-bg"
+      }`}
+    >
+      {on && (
+        <svg width="14" height="14" viewBox="0 0 14 14">
+          <path d="M3 7.4 5.8 10 11 4.4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </span>
   );
 }
 
