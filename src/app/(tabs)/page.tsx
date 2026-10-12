@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Alert, Button, ConfirmSheet, Field, LinkButton, Loading, Sheet } from "@/components/ui";
 import { MemberName } from "@/components/MemberName";
 import { useRoom } from "@/components/rooms";
 import { StampButton, type Slot } from "@/components/Stamp";
+import { StarToggle } from "@/components/StarToggle";
 import { addAdhocEntry, addCheck, deleteEntry, loadDay, removeCheck } from "@/lib/api";
 import { addDays, formatDay, formatTime } from "@/lib/date";
 import { errorMessage } from "@/lib/errors";
@@ -13,7 +15,7 @@ import { ENTRY_MAX, type Check, type DayEntry, type Member } from "@/lib/types";
 import { useRealtime } from "@/lib/useRealtime";
 import { useToday } from "@/lib/useToday";
 
-type Day = { entries: DayEntry[]; checks: Check[]; members: Member[] };
+type Day = { entries: DayEntry[]; checks: Check[]; members: Member[]; starred: boolean };
 
 const SLOTS: { slot: Slot; icon: string; name: string }[] = [
   { slot: "morning", icon: "☀️", name: "朝" },
@@ -152,6 +154,20 @@ export default function TodayPage() {
             ))}
           </ul>
         </section>
+      )}
+
+      {day && isToday && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-border px-4 py-3">
+          <StarToggle
+            roomId={room.id}
+            date={date}
+            starred={day.starred}
+            onChanged={(starred) => setDay((d) => (d ? { ...d, starred } : d))}
+          />
+          <Link href={`/day/${date}`} onClick={tapFeedback} className="min-h-11 py-2 font-bold text-primary underline underline-offset-4">
+            振り返りを書く・読む ›
+          </Link>
+        </div>
       )}
 
       {day && (

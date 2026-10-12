@@ -54,3 +54,27 @@ export type Check = {
 };
 
 export const ENTRY_MAX = 80;
+
+export type ReflectionNote = {
+  id: string;
+  reflection_id: string;
+  room_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Reflection = {
+  id: string;
+  room_id: string;
+  date: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+  reflection_notes: ReflectionNote[];
+};
+
+export const REFLECTION_MAX = 2000;
+export const NOTE_MAX = 1000;

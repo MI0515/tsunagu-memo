@@ -2,7 +2,7 @@
 
 import { getSupabase } from "./supabase";
 import { AppError, toAppError } from "./errors";
-import type { Check, DayEntry, Memo, MemoItem, MemoSummary, Member } from "./types";
+import type { Check, DayEntry, Memo, MemoItem, MemoSummary, Member, Reflection } from "./types";
 
 type Result<T> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -150,20 +150,22 @@ export async function deleteMemoItem(itemId: string) {
 // ---------------------------------------------------------------
 export async function loadDay(roomId: string, date: string) {
   const sb = getSupabase();
-  const [entries, checks, members] = await Promise.all([
+  const [entries, checks, members, star] = await Promise.all([
     sb.from("day_entries").select("id, room_id, date, body, memo_item_id, position, created_at")
       .eq("room_id", roomId).eq("date", date).order("position").order("created_at"),
     sb.from("checks").select("entry_id, slot, user_id, room_id, date, created_at")
       .eq("room_id", roomId).eq("date", date).order("created_at"),
     sb.from("room_members").select("user_id, display_name, role, color, emoji, left_at")
       .eq("room_id", roomId).order("joined_at"),
+    sb.from("day_stars").select("date").eq("room_id", roomId).eq("date", date).maybeSingle(),
   ]);
-  const error = entries.error ?? checks.error ?? members.error;
+  const error = entries.error ?? checks.error ?? members.error ?? star.error;
   if (error) throw toAppError(error);
   return {
     entries: (entries.data ?? []) as DayEntry[],
     checks: (checks.data ?? []) as Check[],
     members: (members.data ?? []) as Member[],
+    starred: star.data !== null,
   };
 }
 
@@ -218,6 +220,65 @@ export async function memoItemsInDays(roomId: string, dates: string[]) {
     .not("memo_item_id", "is", null);
   if (error) throw toAppError(error);
   return (data ?? []) as { date: string; memo_item_id: string }[];
+}
+
+// ---------------------------------------------------------------
+// ⭐と振り返り
+// ---------------------------------------------------------------
+export async function setStar(roomId: string, date: string, on: boolean) {
+  const sb = getSupabase();
+  if (on) {
+    const { error } = await sb.from("day_stars").insert({ room_id: roomId, date, starred_by: await currentUserId() });
+    // ほかの人が先に付けていた時は、付いているので成功扱い
+    if (error && error.code !== "23505") throw toAppError(error);
+  } else {
+    const { error } = await sb.from("day_stars").delete().match({ room_id: roomId, date });
+    if (error) throw toAppError(error);
+  }
+}
+
+export async function loadReflections(roomId: string, date: string): Promise<Reflection[]> {
+  const { data, error } = await getSupabase()
+    .from("reflections")
+    .select("id, room_id, date, author_id, body, created_at, updated_at, reflection_notes(id, reflection_id, room_id, author_id, body, created_at, updated_at)")
+    .eq("room_id", roomId)
+    .eq("date", date)
+    .order("created_at")
+    .order("created_at", { referencedTable: "reflection_notes" });
+  if (error) throw toAppError(error);
+  return (data ?? []) as Reflection[];
+}
+
+export async function writeReflection(roomId: string, date: string, body: string) {
+  const { error } = await getSupabase()
+    .from("reflections").insert({ room_id: roomId, date, author_id: await currentUserId(), body });
+  if (error) throw toAppError(error);
+}
+
+export async function updateReflection(id: string, body: string) {
+  const { error } = await getSupabase().from("reflections").update({ body }).eq("id", id);
+  if (error) throw toAppError(error);
+}
+
+export async function deleteReflection(id: string) {
+  const { error } = await getSupabase().from("reflections").delete().eq("id", id);
+  if (error) throw toAppError(error);
+}
+
+export async function addNote(reflection: Pick<Reflection, "id" | "room_id">, body: string) {
+  const { error } = await getSupabase().from("reflection_notes")
+    .insert({ reflection_id: reflection.id, room_id: reflection.room_id, author_id: await currentUserId(), body });
+  if (error) throw toAppError(error);
+}
+
+export async function updateNote(id: string, body: string) {
+  const { error } = await getSupabase().from("reflection_notes").update({ body }).eq("id", id);
+  if (error) throw toAppError(error);
+}
+
+export async function deleteNote(id: string) {
+  const { error } = await getSupabase().from("reflection_notes").delete().eq("id", id);
+  if (error) throw toAppError(error);
 }
 
 export type ActiveInvite = { token: string; expires_at: string } | null;

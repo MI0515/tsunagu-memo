@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
+import { type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 import { tapFeedback } from "@/lib/feedback";
 
 // 画面全体の枠（スマホの幅に合わせ、ノッチ部分を避ける）
@@ -88,6 +88,30 @@ export function Field({ label, hint, id, maxLength, value, ...rest }: FieldProps
         maxLength={maxLength}
         {...rest}
         className="min-h-14 rounded-2xl border-2 border-border bg-bg px-4 text-lg outline-none focus:border-primary"
+      />
+      <span className="flex justify-between text-sm text-muted">
+        <span>{hint}</span>
+        {maxLength && <span>{length}/{maxLength}</span>}
+      </span>
+    </label>
+  );
+}
+
+type TextAreaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; hint?: string };
+
+// 複数行の入力欄（振り返りなど）
+export function TextArea({ label, hint, id, maxLength, value, rows = 6, ...rest }: TextAreaProps) {
+  const length = typeof value === "string" ? value.length : 0;
+  return (
+    <label htmlFor={id} className="flex flex-col gap-1.5">
+      <span className="font-bold">{label}</span>
+      <textarea
+        id={id}
+        value={value}
+        maxLength={maxLength}
+        rows={rows}
+        {...rest}
+        className="rounded-2xl border-2 border-border bg-bg px-4 py-3 text-lg leading-relaxed outline-none focus:border-primary"
       />
       <span className="flex justify-between text-sm text-muted">
         <span>{hint}</span>
