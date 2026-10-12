@@ -1,0 +1,46 @@
+# 予備の keep-alive。3日に1回、Supabase にアクセスして一時停止を防ぐ。
+# あわせて、メイン（Vercel の定期実行）が2日以上止まっていたら「失敗」にする。
+# 失敗すると、GitHub からメールが届く。
+name: keepalive
+
+on:
+  schedule:
+    - cron: "0 21 */3 * *" # 3日に1回（日本時間の朝6時）
+  workflow_dispatch: # Actions の画面から手で動かせる
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [demo, prod]
+    steps:
+      - name: Supabase にアクセスし、メインの定期実行が動いているか確かめる
+        env:
+          TARGET: ${{ matrix.target }}
+          DEMO_URL: ${{ secrets.DEMO_SUPABASE_URL }}
+          DEMO_KEY: ${{ secrets.DEMO_SUPABASE_SECRET_KEY }}
+          PROD_URL: ${{ secrets.PROD_SUPABASE_URL }}
+          PROD_KEY: ${{ secrets.PROD_SUPABASE_SECRET_KEY }}
+        run: |
+          if [ "$TARGET" = "prod" ]; then URL="$PROD_URL"; KEY="$PROD_KEY"; else URL="$DEMO_URL"; KEY="$DEMO_KEY"; fi
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then
+            echo "::notice::${TARGET} の設定（GitHub の Secrets）がまだないので飛ばします"
+            exit 0
+          fi
+          res=$(curl -sS --fail-with-body -X POST "$URL/rest/v1/rpc/keepalive_check" \
+            -H "apikey: $KEY" -H "Content-Type: application/json" -d '{"p_source":"github-actions"}')
+          hours=$(echo "$res" | jq -r '.hours_since_main')
+          if [ "$hours" = "null" ]; then
+            echo "::warning::${TARGET}：アクセスできました。Vercel の定期実行は、まだ一度も動いていません（公開前なら正常です）"
+            exit 0
+          fi
+          if [ "$hours" -gt 48 ]; then
+            echo "::error::${TARGET}：Vercel の定期実行が ${hours} 時間止まっています。Vercel の Cron Jobs を確認してください"
+            exit 1
+          fi
+          echo "${TARGET}：OK（Vercel の定期実行は ${hours} 時間前に動いています）"
