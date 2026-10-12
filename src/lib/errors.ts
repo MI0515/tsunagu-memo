@@ -19,6 +19,7 @@ const MESSAGES: Record<string, string> = {
   transfer_first: "作成者が退出する前に、ほかのメンバーに作成者を譲ってください。",
   name_mismatch: "入力したルーム名が一致しません。もう一度確かめてください。",
   cannot_remove_self: "自分自身を外すことはできません。退出を使ってください。",
+  invalid_secret: "コードが違うか、期限（10分）が切れています。Safariの「設定」で、もう一度発行してください。",
   limit_reached: "数の上限に達しているため、これ以上追加できません。",
   too_long: "文字数が多すぎます。短くしてください。",
   not_found: "見つかりませんでした。ほかの人が先に消したのかもしれません。",

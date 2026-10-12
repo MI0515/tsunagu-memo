@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { AppTitle, Alert, Card, LinkButton, Page, Phrases } from "@/components/ui";
+import { useDevice } from "@/lib/device";
 
 // まだどのルームにも入っていない人向けの画面
 export function Welcome({ error }: { error?: string | null }) {
+  const device = useDevice();
   return (
     <Page>
       <AppTitle sub="大切にしたいことを、一緒に思い出す" />
@@ -15,9 +17,21 @@ export function Welcome({ error }: { error?: string | null }) {
           押したスタンプは、ルームのみんなにすぐ届きます。
         </p>
       </Card>
+      {/* ホーム画面のアプリとして開いた時は、引き継ぎを一番上に出す */}
+      {device?.standalone && (
+        <Card className="flex flex-col gap-3">
+          <p className="font-bold"><Phrases text="Safariで参加済みの方は、引き継ぎコードを入力してください。" /></p>
+          <LinkButton href="/handoff">引き継ぎコードを入力</LinkButton>
+        </Card>
+      )}
       <div className="flex flex-col gap-3">
-        <LinkButton href="/create">ルームを作る</LinkButton>
+        <LinkButton href="/create" variant={device?.standalone ? "soft" : "primary"}>ルームを作る</LinkButton>
         <p className="text-center text-sm text-muted"><Phrases text="招待された方は、受け取った招待リンクを開いてください。" /></p>
+        {!device?.standalone && (
+          <Link href="/handoff" className="text-center text-sm text-primary underline underline-offset-4">
+            引き継ぎコードをお持ちの方
+          </Link>
+        )}
       </div>
       <footer className="mt-auto text-center">
         <Link href="/notice" className="text-primary underline underline-offset-4">

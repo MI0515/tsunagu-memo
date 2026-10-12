@@ -344,6 +344,17 @@ export const leaveRoom = (roomId: string, mode: "keep" | "erase") =>
 export const deleteRoom = (roomId: string, confirmName: string) =>
   rpc<object>("delete_room", { p_room_id: roomId, p_confirm_name: confirmName });
 
+// ---------------------------------------------------------------
+// 引き継ぎ（Safari → ホーム画面のアプリ、機種変更）
+// ---------------------------------------------------------------
+export const issueHandoffCode = () => rpc<{ code: string }>("issue_handoff_code");
+
+// 引き継ぎコード（または復元用の合言葉）で、今の端末を同じ本人にする
+export async function redeemIdentity(secret: string, captchaToken?: string) {
+  await ensureSession(captchaToken);
+  return rpc<object>("redeem_identity", { p_secret: secret });
+}
+
 export type ActiveInvite = { token: string; expires_at: string } | null;
 
 // いま使える招待リンク（オーナーだけが読める）

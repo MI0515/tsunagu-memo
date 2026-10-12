@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Alert, Button, ConfirmSheet, EmptyState, Field, LinkButton, Loading, PageTitle, Phrases, Sheet } from "@/components/ui";
+import { InstallHint } from "@/components/InstallGuide";
 import { MemberName } from "@/components/MemberName";
 import { useRoom } from "@/components/rooms";
 import { StampButton, type Slot } from "@/components/Stamp";
@@ -82,6 +83,7 @@ export default function TodayPage() {
 
   return (
     <>
+      <InstallHint />
       <div className="flex items-center justify-between gap-3">
         <PageTitle sub={formatDay(date)}>{isToday ? "今日" : "明日"}</PageTitle>
         <div role="group" aria-label="表示する日" className="flex shrink-0 rounded-full border-2 border-border p-0.5">

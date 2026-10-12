@@ -4,15 +4,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Alert, Button, Card, ConfirmSheet, Field, LinkButton, Loading, PageTitle, Phrases, Sheet } from "@/components/ui";
+import { InstallSteps } from "@/components/InstallGuide";
 import { MemberName } from "@/components/MemberName";
 import { useRoom } from "@/components/rooms";
 import {
-  deleteRoom, leaveRoom, listMembers, removeMember, renameRoom, setMemberLook, transferOwner, updateDisplayName,
+  deleteRoom, issueHandoffCode, leaveRoom, listMembers, removeMember, renameRoom, setMemberLook, transferOwner, updateDisplayName,
 } from "@/lib/api";
+import { useDevice } from "@/lib/device";
 import { errorMessage } from "@/lib/errors";
-import { tapFeedback } from "@/lib/feedback";
 import type { Member } from "@/lib/types";
 import { collect, fileName, saveFile, toCsv } from "@/lib/export";
+import { copyText, tapFeedback } from "@/lib/feedback";
 import { useRealtime } from "@/lib/useRealtime";
 
 // 選べる絵文字（ハートや☀️🌙⭐など、アプリの中で別の意味を持つものは入れない）
@@ -113,6 +115,8 @@ export default function SettingsPage() {
               ))}
             </ul>
           </Section>
+
+          <HandoffSection />
 
           <ExportSection room={room} />
 
@@ -540,6 +544,58 @@ function ExportSection({ room }: { room: { id: string; name: string } }) {
         JSONは復元用、CSVはExcelなどで読む用です。iPhoneでは、共有メニューから「ファイルに保存」を選んでください。
       </p>
       {message && <p className="rounded-2xl bg-primary-soft px-3 py-2 text-sm"><Phrases text={message} /></p>}
+      {error && <Alert>{error}</Alert>}
+    </Section>
+  );
+}
+
+// ホーム画面のアプリや、新しい端末へ引き継ぐ。iPhone の Safari では、ホーム画面に追加する手順も出す
+function HandoffSection() {
+  const device = useDevice();
+  const [code, setCode] = useState<{ value: string; expiresAt: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function issue() {
+    setBusy(true);
+    setError(null);
+    setCopied(false);
+    try {
+      const { code: value } = await issueHandoffCode();
+      setCode({ value, expiresAt: Date.now() + 10 * 60 * 1000 });
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const showInstall = device?.ios && !device.standalone;
+  const until = code ? new Date(code.expiresAt).toLocaleTimeString("ja-JP", { hour: "numeric", minute: "2-digit" }) : "";
+
+  return (
+    <Section title={showInstall ? "ホーム画面に追加・引き継ぎ" : "ほかの端末へ引き継ぐ"}>
+      {showInstall && <InstallSteps />}
+      <p className="text-sm text-muted">
+        {showInstall
+          ? "ホーム画面のアプリは、Safariとは別に記録を持っています。アプリを初めて開いた時に、下で発行する引き継ぎコードを入力してください。"
+          : "機種を変える時などは、ここで発行した引き継ぎコードを、新しい端末の「つなぐメモ」で入力してください。"}
+      </p>
+      {code ? (
+        <div className="flex flex-col gap-2 rounded-2xl bg-bg p-3 text-center">
+          <p className="text-sm text-muted">引き継ぎコード（{until}まで・1回だけ使えます）</p>
+          <p className="select-all font-mono text-2xl font-bold tracking-wider tabular-nums">{code.value}</p>
+          <Button variant="soft" onClick={async () => setCopied(await copyText(code.value))}>
+            {copied ? "✓ コピーしました" : "コードをコピー"}
+          </Button>
+          <p className="text-xs text-muted">
+            コードを使うと、この画面ではルームが表示されなくなり、引き継いだ先で続きから使えます。コードは人に見せないでください。
+          </p>
+        </div>
+      ) : (
+        <Button variant="soft" onClick={issue} loading={busy}>引き継ぎコードを発行</Button>
+      )}
       {error && <Alert>{error}</Alert>}
     </Section>
   );
