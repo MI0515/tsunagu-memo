@@ -12,6 +12,7 @@ import {
 import { errorMessage } from "@/lib/errors";
 import { tapFeedback } from "@/lib/feedback";
 import type { Member } from "@/lib/types";
+import { collect, fileName, saveFile, toCsv } from "@/lib/export";
 import { useRealtime } from "@/lib/useRealtime";
 
 // 選べる絵文字（ハートや☀️🌙⭐など、アプリの中で別の意味を持つものは入れない）
@@ -112,6 +113,8 @@ export default function SettingsPage() {
               ))}
             </ul>
           </Section>
+
+          <ExportSection room={room} />
 
           <Section title="ルームから離れる">
             {isOwner && others.length > 0 ? (
@@ -475,7 +478,7 @@ function DeleteRoomSheet({ roomId, roomName, onClose, onDone }: {
           ルーム「{roomName}」と、その中のメモ・確認リスト・スタンプ・振り返り・お気に入りを、すべて削除します。
           メンバー全員が使えなくなり、元には戻せません。
         </p>
-        <p className="text-sm text-muted">大切な記録は、先に書き出しておくと安心です（書き出しは、このあと作ります）。</p>
+        <p className="text-sm text-muted"><Phrases text="大切な記録は、先に設定の「記録の書き出し」で保存しておくと安心です。" /></p>
         <Field
           id="confirm-room-name"
           label="確認のため、ルームの名前を入力してください"
@@ -489,5 +492,55 @@ function DeleteRoomSheet({ roomId, roomName, onClose, onDone }: {
         <Button type="button" variant="soft" onClick={onClose}>キャンセル</Button>
       </form>
     </Sheet>
+  );
+}
+
+// 記録の書き出し。JSON（復元用）と CSV（Excel用）
+function ExportSection({ room }: { room: { id: string; name: string } }) {
+  const [busy, setBusy] = useState<"json" | "csv" | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run(kind: "json" | "csv") {
+    setBusy(kind);
+    setMessage(null);
+    setError(null);
+    try {
+      const data = await collect(room);
+      const result =
+        kind === "json"
+          ? await saveFile(fileName(room.name, "json"), JSON.stringify(data, null, 2), "application/json")
+          : await saveFile(fileName(room.name, "csv"), toCsv(data), "text/csv");
+      if (result !== "cancelled") {
+        const entries = data.days.reduce((n, d) => n + d.entries.length, 0);
+        const reflections = data.days.reduce((n, d) => n + d.reflections.length, 0);
+        setMessage(`${data.days.length}日分（確認リスト${entries}件・振り返り${reflections}件）を保存しました。`);
+      }
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <Section title="記録の書き出し">
+      <p className="text-sm text-muted">
+        無料で運用しているため、自動のバックアップはありません。大切な記録は、月に1回くらい保存しておくと安心です。
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="soft" className="whitespace-nowrap" onClick={() => run("json")} loading={busy === "json"} disabled={busy !== null}>
+          JSONで保存
+        </Button>
+        <Button variant="soft" className="whitespace-nowrap" onClick={() => run("csv")} loading={busy === "csv"} disabled={busy !== null}>
+          CSVで保存
+        </Button>
+      </div>
+      <p className="text-xs text-muted">
+        JSONは復元用、CSVはExcelなどで読む用です。iPhoneでは、共有メニューから「ファイルに保存」を選んでください。
+      </p>
+      {message && <p className="rounded-2xl bg-primary-soft px-3 py-2 text-sm"><Phrases text={message} /></p>}
+      {error && <Alert>{error}</Alert>}
+    </Section>
   );
 }

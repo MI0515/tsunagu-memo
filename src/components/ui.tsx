@@ -189,8 +189,9 @@ export function Loading() {
   return <p className="py-12 text-center text-sm text-muted">読み込んでいます…</p>;
 }
 
-// 日本語の文を、句読点（、。！？）までのかたまりで折り返す。
-// 「まだ空／です」のような、言葉の途中での改行を防ぐ
+// 日本語の短い文を、句読点（、。！？）までのかたまりで折り返す。
+// 「まだ空／です」のような、言葉の途中での改行を防ぐ。
+// 数文にわたる説明では行がぶつ切りに見えるので使わない（ふつうの折り返しにする）
 export function Phrases({ text }: { text: string }) {
   const parts = text.split(/([、。！？])/).reduce<string[]>((acc, part, i) => {
     if (i % 2 === 1) acc[acc.length - 1] += part;
