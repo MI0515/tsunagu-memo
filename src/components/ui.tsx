@@ -99,6 +99,29 @@ export function Alert({ children }: { children: ReactNode }) {
   );
 }
 
+// 下から出てくるパネル。外側をタップすると閉じる
+export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-bg px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+      >
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-xl font-bold">{title}</h2>
+          <button onClick={onClose} className="min-h-11 rounded-full px-4 text-muted active:bg-surface" aria-label="閉じる">
+            閉じる
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function Loading() {
   return <p className="py-16 text-center text-muted">読み込んでいます…</p>;
 }

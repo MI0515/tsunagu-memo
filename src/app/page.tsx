@@ -3,17 +3,21 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppTitle, Alert, Card, LinkButton, Loading, Page } from "@/components/ui";
-import { hasSession, listMyRooms, type MyRoom } from "@/lib/api";
+import { Home } from "@/components/home/Home";
+import { currentUserId, listMyRooms, type MyRoom } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 
 export default function TopPage() {
   const [rooms, setRooms] = useState<MyRoom[] | null>(null);
+  const [myId, setMyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        setRooms((await hasSession()) ? await listMyRooms() : []);
+        const uid = await currentUserId();
+        setMyId(uid);
+        setRooms(uid ? await listMyRooms() : []);
       } catch (e) {
         setError(errorMessage(e));
         setRooms([]);
@@ -49,30 +53,9 @@ export default function TopPage() {
     );
   }
 
-  // ホーム画面（手順3）ができるまでの仮の一覧
   return (
     <Page>
-      <AppTitle />
-      {error && <Alert>{error}</Alert>}
-      <Card className="flex flex-col gap-3">
-        <h1 className="text-xl font-bold">あなたのルーム</h1>
-        <ul className="flex flex-col gap-3">
-          {rooms.map((room) => (
-            <li key={room.id} className="rounded-2xl bg-bg p-4">
-              <p className="text-lg font-bold">{room.name}</p>
-              <p className="text-muted">
-                {room.display_name} として参加中{room.role === "owner" && "（作成者）"}
-              </p>
-              {room.role === "owner" && (
-                <Link href={`/invite/${room.id}`} className="mt-2 inline-block text-primary underline underline-offset-4">
-                  招待リンクを表示
-                </Link>
-              )}
-            </li>
-          ))}
-        </ul>
-        <p className="text-sm text-muted">チェックリストのホーム画面は、次の段階で作ります。</p>
-      </Card>
+      <Home rooms={rooms} myId={myId!} />
     </Page>
   );
 }
