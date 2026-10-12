@@ -17,6 +17,15 @@
   --border: #cbe4f3;
   --alert-bg: #fdf3e7;
   --alert-text: #8a5414;
+  /* 確認リストのスタンプ（☀️朝は空色、🌙夜はラベンダー） */
+  --st-line: #2f8fc6; --st-line-soft: #8ec9ea; --st-empty: #a9d2ea;
+  --st-fill-a: #e2f3fc; --st-fill-b: #93d2f2; --st-fill-c: #5fb6e6;
+  --st-lav-line: #7b6fcf; --st-lav-soft: #bdb4ec; --st-lav-a: #eeebfc; --st-lav-b: #c4bbf1; --st-lav-c: #9d90e3;
+  --st-halo: #ffffff; --st-gloss: #ffffff; --st-sparkle: #ffffff;
+  /* メンバーの色（色覚の違いに配慮した配色。文字として読める濃さ） */
+  --member-1: #1f6fb2; --member-2: #b4530f; --member-3: #0f7a5c;
+  --member-4: #a3437c; --member-5: #876200; --member-6: #5b6470;
+  --member-left: #7b8590;
   color-scheme: light;
 }
 
@@ -34,6 +43,13 @@
     --border: #2a3c4a;
     --alert-bg: #3a2b17;
     --alert-text: #f3cf9b;
+    --st-line: #8fd3f7; --st-line-soft: #4f87a8; --st-empty: #3f6178;
+    --st-fill-a: #1d3a4d; --st-fill-b: #3f8fbd; --st-fill-c: #6cc2f0;
+    --st-lav-line: #c3baf5; --st-lav-soft: #6d63a8; --st-lav-a: #2c2848; --st-lav-b: #7468b8; --st-lav-c: #a99df0;
+    --st-halo: #2a3a48; --st-gloss: #e9f6fd; --st-sparkle: #f4fbff;
+    --member-1: #7cc0f5; --member-2: #f3a36b; --member-3: #5fd0ad;
+    --member-4: #ea9ccb; --member-5: #e8c95a; --member-6: #b8c2cc;
+    --member-left: #8d98a3;
     color-scheme: dark;
   }
 }
@@ -78,7 +94,21 @@ body {
   animation: pop 180ms ease-out;
 }
 
+/* スタンプを押した時：ぽんっと弾み、小さなきらめきが一瞬光る */
+.stamp-pop { animation: stamp-pop 260ms cubic-bezier(.3, 1.6, .5, 1); }
+.stamp-twinkle { animation: stamp-twinkle 520ms ease-out; }
+@keyframes stamp-pop {
+  0% { transform: scale(.82); }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@keyframes stamp-twinkle {
+  0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+  55% { transform: scale(1.35) rotate(8deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-pop { animation: none; }
+  .animate-pop, .stamp-pop, .stamp-twinkle { animation: none; }
   * { transition: none !important; }
 }

@@ -49,7 +49,7 @@ const SHAPES: Record<Motif, { body: string[]; stem?: string; gloss: string; spar
   glint: {
     body: [sparklePath(23, 25, 14.5, 0.4)],
     gloss: "M20.2 19.2Q21.6 16.4 23 13.6",
-    sparkle: [36, 12.5, 3.4],
+    sparkle: [36.8, 11.8, 4.8],
   },
 };
 

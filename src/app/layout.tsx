@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "つなぐメモ",
-  description: "大切な人と、決めたことを一緒に確かめる共有チェックリスト",
+  description: "大切にしたいことを、一緒に何度でも思い出すためのメモ",
   appleWebApp: { capable: true, title: "つなぐメモ", statusBarStyle: "default" },
   robots: { index: false, follow: false },
 };

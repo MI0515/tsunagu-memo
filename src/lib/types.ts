@@ -24,3 +24,33 @@ export const LIMITS = {
   memosPerRoom: 10,
   itemsPerMemo: 30,
 } as const;
+
+export type Member = {
+  user_id: string;
+  display_name: string;
+  role: "owner" | "member";
+  color: number | null;
+  emoji: string | null;
+  left_at: string | null;
+};
+
+export type DayEntry = {
+  id: string;
+  room_id: string;
+  date: string;
+  body: string;
+  memo_item_id: string | null;
+  position: number;
+  created_at: string;
+};
+
+export type Check = {
+  entry_id: string;
+  slot: "morning" | "night";
+  user_id: string;
+  room_id: string;
+  date: string;
+  created_at: string;
+};
+
+export const ENTRY_MAX = 80;

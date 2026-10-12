@@ -7,12 +7,12 @@ import { AppTitle, Alert, Card, LinkButton, Page } from "@/components/ui";
 export function Welcome({ error }: { error?: string | null }) {
   return (
     <Page>
-      <AppTitle sub="大切な人と、決めたことを一緒に確かめる" />
+      <AppTitle sub="大切にしたいことを、一緒に思い出す" />
       {error && <Alert>{error}</Alert>}
       <Card className="flex flex-col gap-3">
         <p>
-          大切にしたいことをメモにしておき、その日に確かめたいものを選んで、
-          朝と夜にチェックするアプリです。チェックは、ルームのみんなにすぐ届きます。
+          大切にしたいことをメモにしておき、その日に思い出したいものを選んで、
+          朝に読み、夜に振り返るためのアプリです。押したスタンプは、ルームのみんなにすぐ届きます。
         </p>
       </Card>
       <div className="flex flex-col gap-3">

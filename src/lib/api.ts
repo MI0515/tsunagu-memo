@@ -2,7 +2,7 @@
 
 import { getSupabase } from "./supabase";
 import { AppError, toAppError } from "./errors";
-import type { Memo, MemoItem, MemoSummary } from "./types";
+import type { Check, DayEntry, Memo, MemoItem, MemoSummary, Member } from "./types";
 
 type Result<T> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -142,6 +142,52 @@ export async function updateMemoItem(itemId: string, body: string) {
 
 export async function deleteMemoItem(itemId: string) {
   const { error } = await getSupabase().from("memo_items").delete().eq("id", itemId);
+  if (error) throw toAppError(error);
+}
+
+// ---------------------------------------------------------------
+// 確認リスト（☀️🌙）
+// ---------------------------------------------------------------
+export async function loadDay(roomId: string, date: string) {
+  const sb = getSupabase();
+  const [entries, checks, members] = await Promise.all([
+    sb.from("day_entries").select("id, room_id, date, body, memo_item_id, position, created_at")
+      .eq("room_id", roomId).eq("date", date).order("position").order("created_at"),
+    sb.from("checks").select("entry_id, slot, user_id, room_id, date, created_at")
+      .eq("room_id", roomId).eq("date", date).order("created_at"),
+    sb.from("room_members").select("user_id, display_name, role, color, emoji, left_at")
+      .eq("room_id", roomId).order("joined_at"),
+  ]);
+  const error = entries.error ?? checks.error ?? members.error;
+  if (error) throw toAppError(error);
+  return {
+    entries: (entries.data ?? []) as DayEntry[],
+    checks: (checks.data ?? []) as Check[],
+    members: (members.data ?? []) as Member[],
+  };
+}
+
+export async function addCheck(check: Omit<Check, "created_at">) {
+  const { error } = await getSupabase().from("checks").insert(check);
+  // 続けて押した時の重複は、押せているので成功扱い
+  if (error && error.code !== "23505") throw toAppError(error);
+}
+
+export async function removeCheck(check: Pick<Check, "entry_id" | "slot" | "user_id">) {
+  const { error } = await getSupabase().from("checks").delete()
+    .match({ entry_id: check.entry_id, slot: check.slot, user_id: check.user_id });
+  if (error) throw toAppError(error);
+}
+
+export async function addAdhocEntry(roomId: string, date: string, body: string) {
+  const uid = await currentUserId();
+  const { error } = await getSupabase().from("day_entries")
+    .insert({ room_id: roomId, date, body, created_by: uid });
+  if (error) throw toAppError(error);
+}
+
+export async function deleteEntry(entryId: string) {
+  const { error } = await getSupabase().from("day_entries").delete().eq("id", entryId);
   if (error) throw toAppError(error);
 }
 
