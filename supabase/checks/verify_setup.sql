@@ -3,10 +3,10 @@
 -- それ以外の行が出たら、その内容を教えてください（秘密の情報は含まれません）。
 
 with problems as (
-  -- 1. 表の数（15個のはず）
+  -- 1. 表の数（17個のはず）
   select '表の数が違う' as problem, count(*)::text as detail
   from pg_tables where schemaname = 'public'
-  having count(*) <> 15
+  having count(*) <> 17
 
   -- 2. 鍵（RLS）がかかっていない表
   union all
