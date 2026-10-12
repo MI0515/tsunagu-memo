@@ -303,6 +303,47 @@ export async function listDays(roomId: string, options: { starredOnly?: boolean 
   return { days: (days.data ?? []) as DaySummary[], members: (members.data ?? []) as Member[] };
 }
 
+// ---------------------------------------------------------------
+// 設定（自分の見え方・ルーム・メンバー・退出・削除）
+// ---------------------------------------------------------------
+export async function listMembers(roomId: string): Promise<Member[]> {
+  const { data, error } = await getSupabase()
+    .from("room_members")
+    .select("user_id, display_name, role, color, emoji, left_at")
+    .eq("room_id", roomId)
+    .is("left_at", null)
+    .order("joined_at");
+  if (error) throw toAppError(error);
+  return (data ?? []) as Member[];
+}
+
+export async function updateDisplayName(roomId: string, displayName: string) {
+  const uid = await currentUserId();
+  const { error } = await getSupabase().from("room_members")
+    .update({ display_name: displayName }).match({ room_id: roomId, user_id: uid });
+  if (error) throw toAppError(error);
+}
+
+export const setMemberLook = (roomId: string, color: number, emoji: string) =>
+  rpc<object>("set_member_look", { p_room_id: roomId, p_color: color, p_emoji: emoji });
+
+export async function renameRoom(roomId: string, name: string) {
+  const { error } = await getSupabase().from("rooms").update({ name }).eq("id", roomId);
+  if (error) throw toAppError(error);
+}
+
+export const transferOwner = (roomId: string, newOwner: string) =>
+  rpc<object>("transfer_owner", { p_room_id: roomId, p_new_owner: newOwner });
+
+export const removeMember = (roomId: string, userId: string) =>
+  rpc<object>("remove_member", { p_room_id: roomId, p_user_id: userId });
+
+export const leaveRoom = (roomId: string, mode: "keep" | "erase") =>
+  rpc<{ room_deleted: boolean }>("leave_room", { p_room_id: roomId, p_mode: mode });
+
+export const deleteRoom = (roomId: string, confirmName: string) =>
+  rpc<object>("delete_room", { p_room_id: roomId, p_confirm_name: confirmName });
+
 export type ActiveInvite = { token: string; expires_at: string } | null;
 
 // いま使える招待リンク（オーナーだけが読める）
