@@ -26,7 +26,7 @@ const PALETTE = {
   night: { line: "var(--st-lav-line)", soft: "var(--st-lav-soft)", a: "var(--st-lav-a)", b: "var(--st-lav-b)", c: "var(--st-lav-c)" },
 };
 
-export function StampIcon({ slot, state, size = 34, animate = false }: {
+export function StampIcon({ slot, state, size = 30, animate = false }: {
   slot: Slot;
   state: StampState;
   size?: number;
@@ -104,7 +104,7 @@ export function StampButton({ slot, count, mine, label, onPress }: {
       }}
       aria-pressed={mine}
       aria-label={`${label}：${description}`}
-      className="flex min-h-14 min-w-14 flex-col items-center justify-center rounded-2xl px-1 py-1 active:scale-95"
+      className="flex min-h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl py-1 active:scale-95"
     >
       <StampIcon key={presses} slot={slot} state={state} animate={presses > 0 && mine} />
       <span

@@ -9,10 +9,10 @@ import { tapFeedback } from "@/lib/feedback";
 export function Page({ children, withTabs = false }: { children: ReactNode; withTabs?: boolean }) {
   return (
     <main
-      className={`mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-5 pt-[max(1.5rem,env(safe-area-inset-top))] ${
+      className={`mx-auto flex min-h-dvh w-full max-w-md flex-col gap-5 px-4 pt-[max(1rem,env(safe-area-inset-top))] ${
         withTabs
-          ? "pb-[calc(6rem+env(safe-area-inset-bottom))]"
-          : "pb-[max(2rem,env(safe-area-inset-bottom))]"
+          ? "pb-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+1.5rem)]"
+          : "pb-[max(1.5rem,env(safe-area-inset-bottom))]"
       }`}
     >
       {children}
@@ -22,16 +22,16 @@ export function Page({ children, withTabs = false }: { children: ReactNode; with
 
 export function AppTitle({ sub }: { sub?: string }) {
   return (
-    <header className="pt-2 text-center">
-      <p className="text-3xl font-bold tracking-wide text-primary">つなぐメモ</p>
-      {sub && <p className="mt-1 text-muted">{sub}</p>}
+    <header className="pt-4 text-center">
+      <p className="text-2xl font-bold tracking-wide text-primary">つなぐメモ</p>
+      {sub && <p className="mt-1 text-sm text-muted"><Phrases text={sub} /></p>}
     </header>
   );
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-3xl border border-border bg-surface p-5 ${className}`}>{children}</section>
+    <section className={`rounded-3xl border border-border bg-surface p-4 ${className}`}>{children}</section>
   );
 }
 
@@ -56,9 +56,11 @@ export function Button({ variant = "primary", loading, children, className = "",
         tapFeedback();
         onClick?.(e);
       }}
-      className={`min-h-14 w-full rounded-2xl px-5 py-3 text-lg font-bold transition-[transform,background-color] duration-150 active:scale-[0.97] disabled:opacity-50 ${VARIANTS[variant]} ${className}`}
+      aria-busy={loading || undefined}
+      className={`min-h-12 w-full rounded-2xl px-4 py-2.5 text-base font-bold leading-snug transition-[transform,background-color] duration-150 active:scale-[0.97] disabled:opacity-50 ${VARIANTS[variant]} ${className}`}
     >
-      {loading ? "少し待ってください…" : children}
+      {children}
+      {loading && "…"}
     </button>
   );
 }
@@ -68,7 +70,7 @@ export function LinkButton({ href, children, variant = "primary" }: { href: stri
     <Link
       href={href}
       onClick={tapFeedback}
-      className={`flex min-h-14 w-full items-center justify-center rounded-2xl px-5 py-3 text-lg font-bold transition-transform active:scale-[0.97] ${VARIANTS[variant]}`}
+      className={`flex min-h-12 w-full items-center justify-center rounded-2xl px-4 py-2.5 text-base font-bold leading-snug transition-transform active:scale-[0.97] ${VARIANTS[variant]}`}
     >
       {children}
     </Link>
@@ -87,11 +89,11 @@ export function Field({ label, hint, id, maxLength, value, ...rest }: FieldProps
         value={value}
         maxLength={maxLength}
         {...rest}
-        className="min-h-14 rounded-2xl border-2 border-border bg-bg px-4 text-lg outline-none focus:border-primary"
+        className="min-h-12 w-full min-w-0 rounded-2xl border-2 border-border bg-bg px-3.5 text-base outline-none focus:border-primary"
       />
-      <span className="flex justify-between text-sm text-muted">
-        <span>{hint}</span>
-        {maxLength && <span>{length}/{maxLength}</span>}
+      <span className="flex justify-between gap-3 text-sm text-muted">
+        <span className="min-w-0">{hint}</span>
+        {maxLength && <span className="shrink-0 tabular-nums">{length}/{maxLength}</span>}
       </span>
     </label>
   );
@@ -111,11 +113,11 @@ export function TextArea({ label, hint, id, maxLength, value, rows = 6, ...rest 
         maxLength={maxLength}
         rows={rows}
         {...rest}
-        className="rounded-2xl border-2 border-border bg-bg px-4 py-3 text-lg leading-relaxed outline-none focus:border-primary"
+        className="w-full min-w-0 rounded-2xl border-2 border-border bg-bg px-3.5 py-3 text-base leading-relaxed outline-none focus:border-primary"
       />
-      <span className="flex justify-between text-sm text-muted">
-        <span>{hint}</span>
-        {maxLength && <span>{length}/{maxLength}</span>}
+      <span className="flex justify-between gap-3 text-sm text-muted">
+        <span className="min-w-0">{hint}</span>
+        {maxLength && <span className="shrink-0 tabular-nums">{length}/{maxLength}</span>}
       </span>
     </label>
   );
@@ -124,7 +126,7 @@ export function TextArea({ label, hint, id, maxLength, value, rows = 6, ...rest 
 // 困った時のお知らせ（責める色の赤は使わない）
 export function Alert({ children }: { children: ReactNode }) {
   return (
-    <p role="alert" className="rounded-2xl bg-alert-bg px-4 py-3 text-alert-text">
+    <p role="alert" className="rounded-2xl bg-alert-bg px-4 py-3 text-sm leading-relaxed text-alert-text">
       {children}
     </p>
   );
@@ -139,11 +141,11 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-bg px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        className="max-h-[90dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl bg-bg px-4 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
       >
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-xl font-bold">{title}</h2>
-          <button onClick={onClose} className="min-h-11 rounded-full px-4 text-muted active:bg-surface" aria-label="閉じる">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="min-w-0 text-lg font-bold leading-snug">{title}</h2>
+          <button onClick={onClose} className="min-h-11 shrink-0 rounded-full px-3 text-sm text-muted active:bg-surface" aria-label="閉じる">
             閉じる
           </button>
         </div>
@@ -174,7 +176,7 @@ export function ConfirmSheet({
   return (
     <Sheet title={title} onClose={onCancel}>
       <div className="flex flex-col gap-4">
-        <div>{message}</div>
+        <div className="leading-relaxed">{message}</div>
         {error && <Alert>{error}</Alert>}
         <Button onClick={onConfirm} loading={busy}>{confirmLabel}</Button>
         <Button variant="soft" onClick={onCancel}>キャンセル</Button>
@@ -184,5 +186,52 @@ export function ConfirmSheet({
 }
 
 export function Loading() {
-  return <p className="py-16 text-center text-muted">読み込んでいます…</p>;
+  return <p className="py-12 text-center text-sm text-muted">読み込んでいます…</p>;
+}
+
+// 日本語の文を、句読点（、。！？）までのかたまりで折り返す。
+// 「まだ空／です」のような、言葉の途中での改行を防ぐ
+export function Phrases({ text }: { text: string }) {
+  const parts = text.split(/([、。！？])/).reduce<string[]>((acc, part, i) => {
+    if (i % 2 === 1) acc[acc.length - 1] += part;
+    else if (part) acc.push(part);
+    return acc;
+  }, []);
+  return (
+    <>
+      {parts.map((p, i) => (
+        <span key={i} className="phrase">{p}</span>
+      ))}
+    </>
+  );
+}
+
+// 中身がまだない時の案内（点線の枠）
+export function EmptyState({ title, body }: { title: string; body?: string }) {
+  return (
+    <section className="rounded-3xl border-2 border-dashed border-border px-4 py-6 text-center">
+      <p className="font-bold"><Phrases text={title} /></p>
+      {body && <p className="mt-1 text-sm text-muted"><Phrases text={body} /></p>}
+    </section>
+  );
+}
+
+// 区切りの見出し
+export function SectionTitle({ children, sub }: { children: ReactNode; sub?: string }) {
+  return (
+    <div>
+      <h2 className="text-[1.0625rem] font-bold leading-snug">{children}</h2>
+      {sub && <p className="text-sm text-muted"><Phrases text={sub} /></p>}
+    </div>
+  );
+}
+
+// 画面の見出し（20px）と、その下の補足
+export function PageTitle({ children, sub }: { children: ReactNode; sub?: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <h1 className="text-xl font-bold leading-snug">{children}</h1>
+      {sub && <p className="text-sm text-muted">{sub}</p>}
+    </div>
+  );
 }

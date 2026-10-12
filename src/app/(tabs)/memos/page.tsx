@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Alert, Button, Field, Loading, Sheet } from "@/components/ui";
+import { Alert, Button, EmptyState, Field, Loading, PageTitle, Phrases, Sheet } from "@/components/ui";
 import { useRoom } from "@/components/rooms";
 import { createMemo, listMemos } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
@@ -43,18 +43,16 @@ export default function MemosPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">メモ</h1>
+      <PageTitle>メモ</PageTitle>
       {selecting && (
-        <p className="rounded-2xl bg-primary-soft px-4 py-3">思い出したい項目があるメモを開いて、選んでください。</p>
+        <p className="rounded-2xl bg-primary-soft px-4 py-3 text-sm"><Phrases text="思い出したい項目があるメモを開いて、選んでください。" /></p>
       )}
       {error && <Alert>{error}</Alert>}
 
       {!memos ? (
         <Loading />
       ) : memos.length === 0 ? (
-        <p className="rounded-3xl border-2 border-dashed border-border p-6 text-center text-muted">
-          メモはまだありません。下のボタンから作れます。
-        </p>
+        <EmptyState title="メモは、まだありません。" body="下のボタンから作れます。" />
       ) : (
         <ul className="flex flex-col gap-3">
           {memos.map((memo) => (
@@ -62,13 +60,13 @@ export default function MemosPage() {
               <Link
                 href={`/memos/${memo.id}${selecting ? "?mode=select" : ""}`}
                 onClick={tapFeedback}
-                className="flex items-center gap-3 rounded-3xl border-2 border-border bg-surface p-5 transition-transform active:scale-[0.98]"
+                className="flex items-center gap-3 rounded-3xl border-2 border-border bg-surface px-4 py-3.5 transition-transform active:scale-[0.98]"
               >
-                <span className="flex-1">
-                  <span className="block text-lg font-bold leading-snug">{memo.title}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold leading-snug">{memo.title}</span>
                   <span className="text-sm text-muted">{memo.item_count}項目</span>
                 </span>
-                <span aria-hidden className="text-2xl text-muted">›</span>
+                <span aria-hidden className="shrink-0 text-xl text-muted">›</span>
               </Link>
             </li>
           ))}

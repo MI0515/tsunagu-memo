@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Alert, Button, Card, ConfirmSheet, Field, LinkButton, Loading, Sheet } from "@/components/ui";
+import { Alert, Button, Card, ConfirmSheet, Field, LinkButton, Loading, PageTitle, Phrases, Sheet } from "@/components/ui";
 import { MemberName } from "@/components/MemberName";
 import { useRoom } from "@/components/rooms";
 import {
@@ -67,7 +67,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">設定</h1>
+      <PageTitle>設定</PageTitle>
       {error && <Alert>{error}</Alert>}
 
       {!members || !me ? (
@@ -96,14 +96,14 @@ export default function SettingsPage() {
           <Section title={`メンバー（${members.length}人）`}>
             <ul className="flex flex-col gap-2">
               {members.map((m) => (
-                <li key={m.user_id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-bg px-4 py-2">
-                  <span>
+                <li key={m.user_id} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl bg-bg px-3 py-2">
+                  <span className="min-w-0">
                     <MemberName member={m} />
-                    {m.role === "owner" && <span className="ml-2 text-sm text-muted">作成者</span>}
-                    {m.user_id === myId && <span className="ml-2 text-sm text-muted">（あなた）</span>}
+                    {m.role === "owner" && <span className="ml-2 whitespace-nowrap text-sm text-muted">作成者</span>}
+                    {m.user_id === myId && <span className="ml-1 whitespace-nowrap text-sm text-muted">（あなた）</span>}
                   </span>
                   {isOwner && m.user_id !== myId && (
-                    <span className="flex gap-1">
+                    <span className="ml-auto flex gap-1">
                       <SmallButton onClick={() => setPanel({ kind: "transfer", member: m })}>作成者を譲る</SmallButton>
                       <SmallButton onClick={() => setPanel({ kind: "remove", member: m })}>外す</SmallButton>
                     </span>
@@ -115,9 +115,9 @@ export default function SettingsPage() {
 
           <Section title="ルームから離れる">
             {isOwner && others.length > 0 ? (
-              <p className="text-muted">作成者が退出する前に、メンバーのだれかに「作成者を譲る」をしてください。</p>
+              <p className="text-sm text-muted"><Phrases text="作成者が退出する前に、メンバーのだれかに「作成者を譲る」をしてください。" /></p>
             ) : isOwner ? (
-              <p className="text-muted">メンバーがあなただけなので、ルームを終える時は下の「ルームを削除」を使ってください。</p>
+              <p className="text-sm text-muted"><Phrases text="メンバーがあなただけなので、ルームを終える時は下の「ルームを削除」を使ってください。" /></p>
             ) : (
               <Button variant="soft" onClick={() => setPanel({ kind: "leave" })}>ルームから退出</Button>
             )}
@@ -192,7 +192,7 @@ export default function SettingsPage() {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Card className="flex flex-col gap-3">
-      <h2 className="text-lg font-bold">{title}</h2>
+      <h2 className="text-[1.0625rem] font-bold">{title}</h2>
       {children}
     </Card>
   );
@@ -203,7 +203,7 @@ function Row({ label, value, onEdit }: { label: string; value: ReactNode; onEdit
     <div className="flex items-center justify-between gap-3">
       <div>
         <p className="text-sm text-muted">{label}</p>
-        <div className="text-lg">{value}</div>
+        <div className="min-w-0">{value}</div>
       </div>
       {onEdit && <SmallButton onClick={onEdit}>変える</SmallButton>}
     </div>
@@ -217,7 +217,7 @@ function SmallButton({ onClick, children }: { onClick: () => void; children: Rea
         tapFeedback();
         onClick();
       }}
-      className="min-h-11 shrink-0 rounded-full border-2 border-border px-3 text-sm font-bold text-primary active:scale-95"
+      className="min-h-11 shrink-0 whitespace-nowrap rounded-full border-2 border-border px-3 text-sm font-bold text-primary active:scale-95"
     >
       {children}
     </button>
@@ -292,8 +292,8 @@ function LookSheet({ roomId, me, members, onClose, onDone }: {
 
   return (
     <Sheet title="色と絵文字を変える" onClose={onClose}>
-      <div className="flex flex-col gap-5">
-        <p className="rounded-2xl bg-surface p-4 text-lg">
+      <div className="flex flex-col gap-4">
+        <p className="rounded-2xl bg-surface p-3">
           <MemberName member={preview} />
         </p>
 

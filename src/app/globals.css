@@ -73,9 +73,20 @@
   --font-sans: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
 }
 
+/*
+  スマホを基準にした文字と余白の決まり（どの画面もこれに合わせる）
+  - 本文・ボタン・入力欄：16px（iPhoneで入力欄が拡大されない大きさ）
+  - 画面の見出し：20px（text-xl）／区切りの見出し：17px（text-[1.0625rem]）
+  - 補足・日時：14px（text-sm）／人数などの数字：12px（text-xs）
+  - 押せる場所：高さ44px以上。主なボタンは48px
+  - 画面の左右の余白：16px／カードの内側：16px
+*/
+:root {
+  --tabbar-height: 3.75rem;
+}
+
 html {
-  /* 余裕がない時でも読めるよう、文字は大きめ */
-  font-size: 18px;
+  font-size: 16px;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -83,9 +94,19 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
-  line-height: 1.7;
+  line-height: 1.65;
   -webkit-tap-highlight-color: transparent;
 }
+
+/*
+  見出しは文節の切れ目で折り返し、行の長さをそろえる（対応しているブラウザのみ）。
+  長い本文は、日本語のふつうの折り返しのまま（文節で区切ると行の長さがばらつくため）
+*/
+h1, h2, h3 { text-wrap: balance; word-break: auto-phrase; }
+p, li { text-wrap: pretty; }
+
+/* 句読点までをひとかたまりにして、途中で改行しない（Phrases 部品で使う） */
+.phrase { display: inline-block; }
 
 /* 押せた感じ：少し縮んで戻る */
 @keyframes pop {

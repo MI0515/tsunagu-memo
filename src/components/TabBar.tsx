@@ -19,7 +19,7 @@ export function TabBar() {
       aria-label="画面の切り替え"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
     >
-      <ul className="mx-auto grid max-w-md grid-cols-4">
+      <ul className="mx-auto grid h-[var(--tabbar-height)] max-w-md grid-cols-4">
         {TABS.map((tab) => {
           const active = tab.match(pathname);
           return (
@@ -28,11 +28,11 @@ export function TabBar() {
                 href={tab.href}
                 onClick={tapFeedback}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-16 flex-col items-center justify-center gap-0.5 text-sm transition-transform active:scale-95 ${
+                className={`flex h-full flex-col items-center justify-center gap-0.5 whitespace-nowrap text-xs transition-transform active:scale-95 ${
                   active ? "font-bold text-primary" : "text-muted"
                 }`}
               >
-                <span aria-hidden className={`text-2xl leading-none ${active ? "" : "opacity-60 grayscale"}`}>
+                <span aria-hidden className={`text-[1.375rem] leading-none ${active ? "" : "opacity-60 grayscale"}`}>
                   {tab.icon}
                 </span>
                 {tab.label}

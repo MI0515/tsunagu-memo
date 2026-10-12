@@ -74,12 +74,12 @@ function InviteContent() {
     <>
       {isNew && (
         <Card className="text-center">
-          <p className="text-xl font-bold">ルーム「{room.name}」ができました</p>
+          <p className="text-lg font-bold leading-snug">ルーム「{room.name}」ができました</p>
           <p className="mt-1 text-muted">一緒に使う人に、招待リンクを送りましょう。</p>
         </Card>
       )}
       <Card className="flex flex-col gap-4">
-        <h1 className="text-xl font-bold">招待リンク</h1>
+        <h1 className="text-[1.0625rem] font-bold">招待リンク</h1>
         {url && invite ? (
           <>
             <p className="break-all rounded-2xl bg-bg p-4 text-sm text-muted">{url}</p>

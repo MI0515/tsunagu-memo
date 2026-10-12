@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { Alert, Button, ConfirmSheet, Loading, Sheet, TextArea } from "@/components/ui";
+import { Alert, Button, ConfirmSheet, Loading, Phrases, Sheet, TextArea } from "@/components/ui";
 import { MemberName } from "@/components/MemberName";
 import { useRoom } from "@/components/rooms";
 import { StampIcon, type Slot } from "@/components/Stamp";
@@ -78,11 +78,11 @@ export default function DayPage() {
   return (
     <>
       <div className="flex items-center justify-between gap-2">
-        <Link href={backHref} className="min-h-11 py-2 text-primary">‹ {date === today ? "今日" : "ふりかえり"}</Link>
+        <Link href={backHref} className="flex min-h-11 items-center whitespace-nowrap text-sm text-primary">‹ {date === today ? "今日" : "ふりかえり"}</Link>
       </div>
 
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-bold">{formatDay(date)}</h1>
+        <h1 className="text-xl font-bold leading-snug">{formatDay(date)}</h1>
         {data && (
           <StarToggle
             roomId={room.id}
@@ -100,24 +100,24 @@ export default function DayPage() {
       ) : (
         <>
           <section className="flex flex-col gap-2">
-            <h2 className="text-lg font-bold">確認リスト</h2>
+            <h2 className="text-[1.0625rem] font-bold">確認リスト</h2>
             {data.entries.length === 0 ? (
-              <p className="text-muted">この日の確認リストはありません。</p>
+              <p className="text-sm text-muted">この日の確認リストはありません。</p>
             ) : (
-              <div className="rounded-3xl border border-border bg-surface px-3 pt-2 pb-1">
-                <div className="flex justify-end gap-1 pr-1 text-center text-sm text-muted">
+              <div className="rounded-3xl border border-border bg-surface px-2 pt-1.5 pb-1">
+                <div className="flex justify-end text-center text-xs text-muted">
                   {SLOTS.map((s) => <span key={s.slot} className="w-12">{s.icon}</span>)}
                 </div>
                 <ul>
                   {data.entries.map((entry) => (
-                    <li key={entry.id} className="flex items-center gap-1 border-t border-border py-2">
-                      <span className="flex-1 pl-1 leading-snug">{entry.body}</span>
+                    <li key={entry.id} className="flex items-center border-t border-border py-1.5">
+                      <span className="min-w-0 flex-1 pr-1 pl-2 leading-snug">{entry.body}</span>
                       {SLOTS.map((s) => {
                         const checks = data.checks.filter((c) => c.entry_id === entry.id && c.slot === s.slot);
                         const isMine = checks.some((c) => c.user_id === myId);
                         return (
-                          <span key={s.slot} className="flex w-12 flex-col items-center" aria-label={`${s.name}：${checks.length}人`}>
-                            <StampIcon slot={s.slot} state={isMine ? "mine" : checks.length > 0 ? "others" : "none"} size={28} />
+                          <span key={s.slot} className="flex w-12 shrink-0 flex-col items-center" aria-label={`${s.name}：${checks.length}人`}>
+                            <StampIcon slot={s.slot} state={isMine ? "mine" : checks.length > 0 ? "others" : "none"} size={26} />
                             <span className="h-4 text-xs leading-4 text-muted">{checks.length || ""}</span>
                           </span>
                         );
@@ -131,8 +131,8 @@ export default function DayPage() {
 
           <section className="flex flex-col gap-3">
             <div>
-              <h2 className="text-lg font-bold">振り返り</h2>
-              <p className="text-sm text-muted">書かなくても大丈夫です。書きたい日に、書きたいことだけ。</p>
+              <h2 className="text-[1.0625rem] font-bold">振り返り</h2>
+              <p className="text-sm text-muted"><Phrases text="書かなくても大丈夫です。書きたい日に、書きたいことだけ。" /></p>
             </div>
 
             {data.reflections.map((reflection) => (
@@ -201,8 +201,8 @@ function ReflectionCard({ reflection, members, myId, onEdit, onDelete, onAddNote
   const author = members.get(reflection.author_id);
   const isMine = reflection.author_id === myId;
   return (
-    <article className="rounded-3xl border border-border bg-surface p-4" style={{ borderLeft: `2px solid ${colorOf(author)}` }}>
-      <header className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+    <article className="rounded-3xl border border-border bg-surface px-4 py-3" style={{ borderLeft: `2px solid ${colorOf(author)}` }}>
+      <header className="mb-1 flex flex-wrap items-baseline justify-between gap-x-2">
         <MemberName member={author} />
         <span className="text-xs text-muted">
           {formatTime(reflection.created_at)}
@@ -244,7 +244,7 @@ function ReflectionCard({ reflection, members, myId, onEdit, onDelete, onAddNote
           tapFeedback();
           onAddNote();
         }}
-        className="mt-3 min-h-11 font-bold text-primary"
+        className="mt-2 min-h-11 text-sm font-bold text-primary"
       >
         ＋ 追記する
       </button>

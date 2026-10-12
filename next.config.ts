@@ -5,6 +5,8 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
+  // 開発中に画面の隅に出る Next.js のマークを出さない（スマホで試す時にタブと重なるため）
+  devIndicators: false,
   pageExtensions: isDev ? ["dev.tsx", "tsx", "ts", "jsx", "js"] : ["tsx", "ts", "jsx", "js"],
 };
 

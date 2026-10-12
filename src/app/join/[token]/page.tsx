@@ -68,7 +68,7 @@ export default function JoinPage() {
       <AppTitle sub="招待が届いています" />
       <Card className="text-center">
         <p className="text-muted">参加するルーム</p>
-        <p className="text-2xl font-bold">{invite.roomName}</p>
+        <p className="text-xl font-bold leading-snug">{invite.roomName}</p>
       </Card>
       <Card>
         <form onSubmit={submit} className="flex flex-col gap-5">

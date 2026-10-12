@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, LinkButton, Loading } from "@/components/ui";
+import { Alert, EmptyState, LinkButton, Loading, PageTitle } from "@/components/ui";
 import { useRoom } from "@/components/rooms";
 import { listDays, type DaySummary } from "@/lib/api";
 import { formatDayWithYear } from "@/lib/date";
@@ -39,10 +39,7 @@ export default function ReviewPage() {
 
   return (
     <>
-      <div>
-        <h1 className="text-2xl font-bold">ふりかえり</h1>
-        <p className="text-muted">お気に入りにした日</p>
-      </div>
+      <PageTitle sub="お気に入りにした日">ふりかえり</PageTitle>
 
       {error && <Alert>{error}</Alert>}
 
@@ -50,10 +47,10 @@ export default function ReviewPage() {
         <Loading />
       ) : data.days.length === 0 ? (
         <>
-          <section className="rounded-3xl border-2 border-dashed border-border p-6 text-center">
-            <p className="text-lg">お気に入りにした日は、まだありません。</p>
-            <p className="mt-1 text-muted">残しておきたい日に「お気に入り」を押すと、ここに並びます。</p>
-          </section>
+          <EmptyState
+            title="お気に入りにした日は、まだありません。"
+            body="「お気に入り」を押した日が、ここに並びます。"
+          />
           <LinkButton href={`/day/${today}`} variant="soft">今日の振り返りを見る</LinkButton>
         </>
       ) : (
@@ -63,11 +60,11 @@ export default function ReviewPage() {
               <Link
                 href={`/day/${day.date}`}
                 onClick={tapFeedback}
-                className="flex items-center gap-3 rounded-3xl border-2 border-border bg-surface p-4 transition-transform active:scale-[0.98]"
+                className="flex items-center gap-3 rounded-3xl border-2 border-border bg-surface px-4 py-3.5 transition-transform active:scale-[0.98]"
               >
                 <StarMark />
-                <span className="flex-1">
-                  <span className="block text-lg font-bold">{formatDayWithYear(day.date)}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold">{formatDayWithYear(day.date)}</span>
                   <span className="flex flex-wrap items-center gap-x-3 text-sm text-muted">
                     {day.entry_count > 0 && <span>確認リスト {day.entry_count}項目</span>}
                     {day.reflection_authors.length > 0 && (
@@ -86,7 +83,7 @@ export default function ReviewPage() {
                     )}
                   </span>
                 </span>
-                <span aria-hidden className="text-2xl text-muted">›</span>
+                <span aria-hidden className="shrink-0 text-xl text-muted">›</span>
               </Link>
             </li>
           ))}

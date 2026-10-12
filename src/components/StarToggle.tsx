@@ -7,7 +7,8 @@ import { tapFeedback } from "@/lib/feedback";
 
 // 日を「お気に入り」にする・解除する（保存先は⭐の記録）。
 // 押した瞬間に見た目を変え、保存に失敗したら戻す
-export function StarToggle({ roomId, date, starred, onChanged }: {
+export function StarToggle({ roomId, date, starred, onChanged, block = false }: {
+  block?: boolean;
   roomId: string;
   date: string;
   starred: boolean;
@@ -35,12 +36,12 @@ export function StarToggle({ roomId, date, starred, onChanged }: {
   }
 
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className={`flex flex-col gap-1 ${block ? "items-stretch" : "items-start"}`}>
       <button
         onClick={toggle}
         disabled={busy}
         aria-pressed={starred}
-        className={`flex min-h-11 items-center gap-1.5 rounded-full border-2 px-4 font-bold transition-colors active:scale-95 ${
+        className={`flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border-2 px-4 text-sm font-bold transition-colors active:scale-95 ${block ? "w-full" : ""} ${
           starred ? "border-[var(--star-line)] text-text" : "border-border text-muted"
         }`}
       >
@@ -55,7 +56,7 @@ export function StarToggle({ roomId, date, starred, onChanged }: {
 // 星は1つだけ。お気に入りでない時は輪郭だけ、お気に入りの時は黄色で塗る
 function StarIcon({ filled, animate }: { filled: boolean; animate: boolean }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden className={animate ? "animate-pop" : undefined}>
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden className={animate ? "animate-pop" : undefined}>
       <path
         d="M12 3.2l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z"
         fill={filled ? "var(--star-fill)" : "none"}

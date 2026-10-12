@@ -85,14 +85,17 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// 画面上部：アプリ名と、ルームの切り替え（2つ以上ある時だけ）
+// 画面上部：アプリ名とルーム名を1行に。ルームが2つ以上ある時だけ、切り替えボタンを出す
 export function RoomHeader() {
   const { rooms, room, selectRoom } = useRoom();
   return (
     <header className="flex flex-col gap-2">
-      <p className="text-lg font-bold text-primary">つなぐメモ</p>
-      {rooms.length > 1 ? (
-        <nav aria-label="ルームの切り替え" className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
+      <div className="flex min-h-8 items-center justify-between gap-3">
+        <p className="shrink-0 text-sm font-bold text-primary">つなぐメモ</p>
+        {rooms.length === 1 && <p className="min-w-0 truncate text-sm text-muted">{room.name}</p>}
+      </div>
+      {rooms.length > 1 && (
+        <nav aria-label="ルームの切り替え" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
           {rooms.map((r) => (
             <button
               key={r.id}
@@ -101,7 +104,7 @@ export function RoomHeader() {
                 selectRoom(r.id);
               }}
               aria-current={r.id === room.id}
-              className={`min-h-11 shrink-0 rounded-full border-2 px-4 font-bold transition-colors active:scale-95 ${
+              className={`min-h-11 shrink-0 whitespace-nowrap rounded-full border-2 px-4 text-sm font-bold transition-colors active:scale-95 ${
                 r.id === room.id ? "border-primary bg-primary text-on-primary" : "border-border bg-bg text-muted"
               }`}
             >
@@ -109,8 +112,6 @@ export function RoomHeader() {
             </button>
           ))}
         </nav>
-      ) : (
-        <p className="text-muted">{room.name}</p>
       )}
     </header>
   );

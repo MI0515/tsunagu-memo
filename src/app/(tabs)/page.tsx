@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { Alert, Button, ConfirmSheet, Field, LinkButton, Loading, Sheet } from "@/components/ui";
+import { Alert, Button, ConfirmSheet, EmptyState, Field, LinkButton, Loading, PageTitle, Phrases, Sheet } from "@/components/ui";
 import { MemberName } from "@/components/MemberName";
 import { useRoom } from "@/components/rooms";
 import { StampButton, type Slot } from "@/components/Stamp";
@@ -82,12 +82,9 @@ export default function TodayPage() {
 
   return (
     <>
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{isToday ? "今日" : "明日"}</h1>
-          <p className="text-muted">{formatDay(date)}</p>
-        </div>
-        <div role="group" aria-label="表示する日" className="flex rounded-full border-2 border-border p-0.5">
+      <div className="flex items-center justify-between gap-3">
+        <PageTitle sub={formatDay(date)}>{isToday ? "今日" : "明日"}</PageTitle>
+        <div role="group" aria-label="表示する日" className="flex shrink-0 rounded-full border-2 border-border p-0.5">
           {(["today", "tomorrow"] as const).map((w) => (
             <button
               key={w}
@@ -97,7 +94,7 @@ export default function TodayPage() {
                 setOpenEntryId(null);
               }}
               aria-pressed={which === w}
-              className={`min-h-11 rounded-full px-4 font-bold transition-colors ${
+              className={`min-h-10 whitespace-nowrap rounded-full px-3.5 text-sm font-bold transition-colors ${
                 which === w ? "bg-primary text-on-primary" : "text-muted"
               }`}
             >
@@ -112,28 +109,28 @@ export default function TodayPage() {
       {!day ? (
         <Loading />
       ) : day.entries.length === 0 ? (
-        <section className="rounded-3xl border-2 border-dashed border-border p-6 text-center">
-          <p className="text-lg">{isToday ? "今日" : "明日"}の確認リストは、まだ空です。</p>
-          <p className="mt-1 text-muted">メモから、思い出したいことを選んでください。</p>
-        </section>
+        <EmptyState
+          title={`${isToday ? "今日" : "明日"}の確認リストは、まだ空です。`}
+          body="メモから、思い出したいことを選んでください。"
+        />
       ) : (
-        <section className="rounded-3xl border border-border bg-surface px-3 pt-2 pb-1">
+        <section className="rounded-3xl border border-border bg-surface px-2 pt-1.5 pb-1">
           {isToday ? (
-            <div className="flex justify-end gap-1 pr-1 text-center text-sm text-muted">
-              {SLOTS.map((s) => <span key={s.slot} className="w-14">{s.icon} {s.name}</span>)}
+            <div className="flex justify-end text-center text-xs text-muted">
+              {SLOTS.map((s) => <span key={s.slot} className="w-12 whitespace-nowrap">{s.icon} {s.name}</span>)}
             </div>
           ) : (
-            <p className="px-1 py-2 text-sm text-muted">☀️🌙は、明日になったら押せます。</p>
+            <p className="px-2 py-1.5 text-sm text-muted"><Phrases text="☀️🌙は、明日になったら押せます。" /></p>
           )}
           <ul>
             {day.entries.map((entry) => (
-              <li key={entry.id} className="flex items-center gap-1 border-t border-border py-1">
+              <li key={entry.id} className="flex items-center border-t border-border py-1">
                 <button
                   onClick={() => {
                     tapFeedback();
                     setOpenEntryId(entry.id);
                   }}
-                  className="min-h-14 flex-1 py-2 pl-1 text-left leading-snug"
+                  className="min-h-12 min-w-0 flex-1 py-2 pr-1 pl-2 text-left leading-snug"
                 >
                   {entry.body}
                 </button>
@@ -157,28 +154,33 @@ export default function TodayPage() {
       )}
 
       {day && isToday && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-border px-4 py-3">
+        <div className="grid grid-cols-2 gap-2">
           <StarToggle
+            block
             roomId={room.id}
             date={date}
             starred={day.starred}
             onChanged={(starred) => setDay((d) => (d ? { ...d, starred } : d))}
           />
-          <Link href={`/day/${date}`} onClick={tapFeedback} className="min-h-11 py-2 font-bold text-primary underline underline-offset-4">
-            振り返りを書く・読む ›
+          <Link
+            href={`/day/${date}`}
+            onClick={tapFeedback}
+            className="flex min-h-11 items-center justify-center whitespace-nowrap rounded-full border-2 border-border px-4 text-sm font-bold text-primary active:scale-95"
+          >
+            振り返り ›
           </Link>
         </div>
       )}
 
       {day && (
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-1">
           <LinkButton href="/memos?mode=select">メモから選ぶ</LinkButton>
           <button
             onClick={() => {
               tapFeedback();
               setAddingAdhoc(true);
             }}
-            className="min-h-11 px-4 text-primary underline underline-offset-4"
+            className="min-h-11 px-4 text-sm text-primary underline underline-offset-4"
           >
             ＋ その日だけの項目
           </button>
@@ -246,15 +248,15 @@ function EntrySheet({ entry, checks, members, onClose, onDeleted }: {
 
   return (
     <Sheet title="だれがいつ押したか" onClose={onClose}>
-      <div className="flex flex-col gap-5">
-        <p className="rounded-2xl bg-surface p-4 leading-relaxed">{entry.body}</p>
+      <div className="flex flex-col gap-4">
+        <p className="rounded-2xl bg-surface p-3 leading-relaxed">{entry.body}</p>
         {SLOTS.map((s) => {
           const list = checks.filter((c) => c.slot === s.slot);
           return (
             <section key={s.slot}>
               <h3 className="mb-1 font-bold">{s.icon} {s.name}</h3>
               {list.length === 0 ? (
-                <p className="text-muted">まだだれも押していません。</p>
+                <p className="text-sm text-muted">まだだれも押していません。</p>
               ) : (
                 <ul className="flex flex-col gap-1">
                   {list.map((c) => (

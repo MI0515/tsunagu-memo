@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { Alert, Button, ConfirmSheet, Field, LinkButton, Loading, Sheet } from "@/components/ui";
+import { Alert, Button, ConfirmSheet, EmptyState, Field, LinkButton, Loading, PageTitle, Phrases, Sheet } from "@/components/ui";
 import { useRoom } from "@/components/rooms";
 import {
   addMemoItem, addToDay, deleteMemo, deleteMemoItem, getMemo, lastSelection, memoItemsInDays, renameMemo, updateMemoItem,
@@ -160,7 +160,7 @@ export default function MemoPage() {
   return (
     <>
       <div className="flex items-center justify-between gap-2">
-        <Link href="/memos" className="min-h-11 py-2 text-primary">‹ メモ一覧</Link>
+        <Link href="/memos" className="flex min-h-11 shrink-0 items-center whitespace-nowrap text-sm text-primary">‹ メモ一覧</Link>
         {mode === "read" ? (
           <div className="flex gap-2">
             <ModeButton onClick={() => changeMode("select")}>選ぶ</ModeButton>
@@ -171,17 +171,12 @@ export default function MemoPage() {
         )}
       </div>
 
-      <div>
-        <h1 className="text-2xl font-bold leading-snug">{memo.title}</h1>
-        <p className="mt-1 text-sm text-muted">{hint}</p>
-      </div>
+      <PageTitle sub={<Phrases text={hint} />}>{memo.title}</PageTitle>
 
       {error && <Alert>{error}</Alert>}
 
       {items.length === 0 ? (
-        <p className="rounded-3xl border-2 border-dashed border-border p-6 text-center text-muted">
-          項目はまだありません。「編集する」から追加できます。
-        </p>
+        <EmptyState title="項目は、まだありません。" body="「編集する」から追加できます。" />
       ) : (
         <ol className="flex flex-col gap-2">
           {items.map((item, index) => {
@@ -198,26 +193,26 @@ export default function MemoPage() {
                     else if (await copyText(item.body)) flash(item.id);
                   }}
                   aria-pressed={mode === "select" ? isSelected : undefined}
-                  className={`flex w-full items-start gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-colors active:scale-[0.99] ${
+                  className={`flex w-full items-start gap-2 rounded-2xl border-2 px-3 py-2.5 text-left transition-colors active:scale-[0.99] ${
                     copied || isSelected
                       ? "border-primary bg-primary-soft"
                       : mode === "edit" ? "border-dashed border-border bg-bg" : "border-transparent bg-surface"
                   }`}
                 >
                   {mode === "select" && <SelectMark on={isSelected} />}
-                  <span className="min-w-[1.75rem] font-bold text-primary">{index + 1}.</span>
-                  <span className="flex-1 leading-relaxed">
+                  <span className="w-6 shrink-0 text-right font-bold leading-relaxed text-primary tabular-nums">{index + 1}.</span>
+                  <span className="min-w-0 flex-1 leading-relaxed">
                     {item.body}
-                    {days.length > 0 && (
-                      <span className="mt-1 flex gap-1">
+                    {(days.length > 0 || copied) && (
+                      <span className="mt-1 flex flex-wrap gap-1">
+                        {copied && <span className="whitespace-nowrap text-xs font-bold text-primary">✓ コピーしました</span>}
                         {days.sort().reverse().map((d) => (
-                          <span key={d} className="rounded-full bg-bg px-2 text-xs text-muted">{d}のリストに入っています</span>
+                          <span key={d} className="whitespace-nowrap rounded-full bg-bg px-2 text-xs text-muted">{d}のリストに入っています</span>
                         ))}
                       </span>
                     )}
                   </span>
-                  {copied && <span className="shrink-0 text-sm font-bold text-primary">✓ コピーしました</span>}
-                  {mode === "edit" && <span aria-hidden className="shrink-0 text-muted">✎</span>}
+                  {mode === "edit" && <span aria-hidden className="shrink-0 leading-relaxed text-muted">✎</span>}
                 </button>
               </li>
             );
@@ -226,33 +221,36 @@ export default function MemoPage() {
       )}
 
       {mode === "select" && items.length > 0 && (
-        <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 flex flex-col gap-3 rounded-3xl border border-border bg-bg p-4 shadow-lg">
+        // 下のタブのすぐ上に固定。パネルはリストの後ろに並んでいるので、一番下までスクロールすれば最後の項目も隠れない
+        <div className="sticky bottom-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+0.5rem)] z-20 -mx-1 flex flex-col gap-2 rounded-3xl border border-border bg-bg p-3 shadow-lg">
           {notice && (
-            <div className="rounded-2xl bg-primary-soft px-4 py-3">
-              <p>{notice.text}</p>
+            <div className="rounded-2xl bg-primary-soft px-3 py-2 text-sm">
+              <p><Phrases text={notice.text} /></p>
               {notice.link && (
-                <Link href={notice.link.href} className="font-bold text-primary underline underline-offset-4">
+                <Link href={notice.link.href} className="inline-flex min-h-9 items-center font-bold text-primary underline underline-offset-4">
                   {notice.link.label}
                 </Link>
               )}
             </div>
           )}
           <div className="flex items-center justify-between gap-2">
-            <p className="font-bold">{chosen.length}件選択中</p>
-            <div className="flex gap-1">
-              <SmallButton onClick={selectLast} disabled={busy !== null}>前回と同じ</SmallButton>
-              <SmallButton onClick={() => setSelected(new Set())} disabled={chosen.length === 0}>選択を解除</SmallButton>
-            </div>
+            <p className="whitespace-nowrap text-sm font-bold">
+              <span className="tabular-nums">{chosen.length}</span>件を選択中
+            </p>
+            <SmallButton onClick={() => setSelected(new Set())} disabled={chosen.length === 0}>選択を解除</SmallButton>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Button onClick={() => add("today")} loading={busy === "today"} disabled={chosen.length === 0 || busy !== null}>
+            <Button className="whitespace-nowrap" onClick={() => add("today")} loading={busy === "today"} disabled={chosen.length === 0 || busy !== null}>
               今日に追加
             </Button>
-            <Button variant="soft" onClick={() => add("tomorrow")} loading={busy === "tomorrow"} disabled={chosen.length === 0 || busy !== null}>
+            <Button className="whitespace-nowrap" variant="soft" onClick={() => add("tomorrow")} loading={busy === "tomorrow"} disabled={chosen.length === 0 || busy !== null}>
               明日に追加
             </Button>
           </div>
-          <SmallButton onClick={copyChosen} disabled={chosen.length === 0}>選んだ項目をコピー</SmallButton>
+          <div className="grid grid-cols-2 gap-2">
+            <SmallButton outline onClick={selectLast} disabled={busy !== null}>前回と同じ</SmallButton>
+            <SmallButton outline onClick={copyChosen} disabled={chosen.length === 0}>コピー</SmallButton>
+          </div>
         </div>
       )}
 
@@ -292,7 +290,7 @@ function ModeButton({ active = false, onClick, children }: { active?: boolean; o
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`min-h-11 rounded-full border-2 px-4 font-bold transition-colors active:scale-95 ${
+      className={`min-h-11 whitespace-nowrap rounded-full border-2 px-3.5 text-sm font-bold transition-colors active:scale-95 ${
         active ? "border-primary bg-primary text-on-primary" : "border-border text-primary"
       }`}
     >
@@ -301,7 +299,12 @@ function ModeButton({ active = false, onClick, children }: { active?: boolean; o
   );
 }
 
-function SmallButton({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
+function SmallButton({ onClick, disabled, outline = false, children }: {
+  onClick: () => void;
+  disabled?: boolean;
+  outline?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <button
       onClick={() => {
@@ -309,7 +312,9 @@ function SmallButton({ onClick, disabled, children }: { onClick: () => void; dis
         onClick();
       }}
       disabled={disabled}
-      className="min-h-11 rounded-full px-3 text-sm font-bold text-primary active:bg-surface disabled:opacity-40"
+      className={`min-h-11 whitespace-nowrap rounded-full px-3 text-sm font-bold text-primary active:bg-surface disabled:opacity-40 ${
+        outline ? "border-2 border-border" : ""
+      }`}
     >
       {children}
     </button>
