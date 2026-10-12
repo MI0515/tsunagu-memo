@@ -60,7 +60,7 @@ const check = (name, cond, extra) => {
   if (!cond) fails++
 }
 const rpc = async (user, fn, args) => (await as(user, `select public.${fn}(${args}) as r`))[0].r
-const expectErr = async (name, p) => { try { await p; check(name, false, 'no error') } catch (e) { check(name, true) } }
+const expectErr = async (name, p) => { try { await p; check(name, false, 'no error') } catch { check(name, true) } }
 
 // --- Supabase上で使う確認用SQLが「すべてOK」になるか
 const verify = (await db.query(readFileSync(new URL('../checks/verify_setup.sql', import.meta.url), 'utf8'))).rows

@@ -1,26 +1,84 @@
 @import "tailwindcss";
 
+/*
+  つなぐメモの色
+  空色をメインに、白い背景と深いグレーの文字。ダークモードでは夜空の色に切り替える。
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg: #ffffff;
+  --surface: #f3f9fd;
+  --surface-strong: #e2f2fb;
+  --primary: #1a8bc9;
+  --primary-press: #157aaf;
+  --on-primary: #ffffff;
+  --primary-soft: #d6eefa;
+  --text: #2b2f33;
+  --muted: #66717c;
+  --border: #cbe4f3;
+  --alert-bg: #fdf3e7;
+  --alert-text: #8a5414;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #11171c;
+    --surface: #18212a;
+    --surface-strong: #213040;
+    --primary: #6cc2f0;
+    --primary-press: #8dd0f4;
+    --on-primary: #0b1a24;
+    --primary-soft: #1d3a4d;
+    --text: #e9eef2;
+    --muted: #9ba8b3;
+    --border: #2a3c4a;
+    --alert-bg: #3a2b17;
+    --alert-text: #f3cf9b;
+    color-scheme: dark;
   }
 }
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-primary: var(--primary);
+  --color-primary-press: var(--primary-press);
+  --color-on-primary: var(--on-primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-alert-bg: var(--alert-bg);
+  --color-alert-text: var(--alert-text);
+  --font-sans: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+}
+
+html {
+  /* 余裕がない時でも読めるよう、文字は大きめ */
+  font-size: 18px;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: 1.7;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 押せた感じ：少し縮んで戻る */
+@keyframes pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+.animate-pop {
+  animation: pop 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pop { animation: none; }
+  * { transition: none !important; }
 }
