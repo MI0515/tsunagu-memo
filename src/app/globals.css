@@ -22,9 +22,9 @@
   --st-fill-a: #e2f3fc; --st-fill-b: #93d2f2; --st-fill-c: #5fb6e6;
   --st-lav-line: #7b6fcf; --st-lav-soft: #bdb4ec; --st-lav-a: #eeebfc; --st-lav-b: #c4bbf1; --st-lav-c: #9d90e3;
   --st-halo: #ffffff; --st-gloss: #ffffff; --st-sparkle: #ffffff;
-  /* メンバーの色（色覚の違いに配慮した配色。文字として読める濃さ） */
-  --member-1: #1f6fb2; --member-2: #b4530f; --member-3: #0f7a5c;
-  --member-4: #a3437c; --member-5: #876200; --member-6: #5b6470;
+  /* メンバーの色（色覚の違いに配慮して選んだ6色。文字として読める濃さ。灰色は退出したメンバー用） */
+  --member-1: #3d79a0; --member-2: #c34e10; --member-3: #138361;
+  --member-4: #bb4b7d; --member-5: #924de6; --member-6: #46810a;
   --member-left: #7b8590;
   /* お気に入りの星 */
   --star-fill: #f7c948; --star-line: #a87b00;
@@ -49,8 +49,8 @@
     --st-fill-a: #1d3a4d; --st-fill-b: #3f8fbd; --st-fill-c: #6cc2f0;
     --st-lav-line: #c3baf5; --st-lav-soft: #6d63a8; --st-lav-a: #2c2848; --st-lav-b: #7468b8; --st-lav-c: #a99df0;
     --st-halo: #2a3a48; --st-gloss: #e9f6fd; --st-sparkle: #f4fbff;
-    --member-1: #7cc0f5; --member-2: #f3a36b; --member-3: #5fd0ad;
-    --member-4: #ea9ccb; --member-5: #e8c95a; --member-6: #b8c2cc;
+    --member-1: #85b2d1; --member-2: #f29563; --member-3: #1cc391;
+    --member-4: #d99bb7; --member-5: #c29cf1; --member-6: #69c210;
     --member-left: #8d98a3;
     --star-fill: #f7c948; --star-line: #f7c948;
     color-scheme: dark;

@@ -46,3 +46,15 @@ export function formatTime(iso: string): string {
 }
 
 export const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
+
+// 今年なら「10月13日（火）」、それ以外は「2025年10月13日（月）」
+export function formatDayWithYear(date: string): string {
+  const sameYear = date.slice(0, 4) === jstToday().slice(0, 4);
+  return parse(date).toLocaleDateString("ja-JP", {
+    timeZone: "UTC",
+    ...(sameYear ? {} : { year: "numeric" }),
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
+}

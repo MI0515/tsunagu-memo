@@ -281,6 +281,28 @@ export async function deleteNote(id: string) {
   if (error) throw toAppError(error);
 }
 
+// ---------------------------------------------------------------
+// ⭐一覧（お気に入りにした日）
+// ---------------------------------------------------------------
+export type DaySummary = {
+  date: string;
+  entry_count: number;
+  check_count: number;
+  reflection_authors: string[];
+  starred: boolean;
+};
+
+export async function listDays(roomId: string, options: { starredOnly?: boolean } = {}) {
+  const sb = getSupabase();
+  const [days, members] = await Promise.all([
+    sb.rpc("day_summaries", { p_room_id: roomId, p_starred_only: options.starredOnly ?? false }),
+    sb.from("room_members").select("user_id, display_name, role, color, emoji, left_at").eq("room_id", roomId),
+  ]);
+  const error = days.error ?? members.error;
+  if (error) throw toAppError(error);
+  return { days: (days.data ?? []) as DaySummary[], members: (members.data ?? []) as Member[] };
+}
+
 export type ActiveInvite = { token: string; expires_at: string } | null;
 
 // いま使える招待リンク（オーナーだけが読める）
