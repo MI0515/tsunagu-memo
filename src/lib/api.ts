@@ -26,7 +26,8 @@ export async function ensureSession(captchaToken?: string) {
     captchaToken ? { options: { captchaToken } } : undefined,
   );
   if (error || !signedIn.session) {
-    throw new AppError(error?.status === 429 ? "rate_limited" : "signin_failed");
+    const code = error?.code === "captcha_failed" ? "captcha_failed" : error?.status === 429 ? "rate_limited" : "signin_failed";
+    throw new AppError(code);
   }
   return signedIn.session;
 }
