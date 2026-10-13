@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Page } from "@/components/ui";
 import { DemoBanner } from "@/components/DemoBanner";
+import { FirstRunGuide } from "@/components/FirstRunGuide";
 import { RoomHeader, RoomProvider } from "@/components/rooms";
 import { TabBar } from "@/components/TabBar";
 
@@ -16,6 +17,8 @@ export default function TabsLayout({ children }: { children: ReactNode }) {
         {children}
       </Page>
       <TabBar />
+      {/* 招待リンクから参加した人には、参加した直後に1回だけ出す */}
+      <FirstRunGuide />
     </RoomProvider>
   );
 }

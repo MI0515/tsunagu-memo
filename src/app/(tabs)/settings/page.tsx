@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Alert, Button, Card, ConfirmSheet, Field, LinkButton, Loading, PageTitle, Phrases, Sheet } from "@/components/ui";
+import { FirstRunGuide } from "@/components/FirstRunGuide";
 import { InstallSteps } from "@/components/InstallGuide";
 import { MemberName } from "@/components/MemberName";
 import { useRoom } from "@/components/rooms";
@@ -134,6 +135,8 @@ export default function SettingsPage() {
               <Button variant="ghost" onClick={() => setPanel({ kind: "delete-room" })}>ルームを削除</Button>
             )}
           </Section>
+
+          <GuideSection />
 
           <Link href="/notice" className="text-center text-primary underline underline-offset-4">ご利用の前に（注意事項）</Link>
         </>
@@ -659,6 +662,17 @@ function RestoreSection() {
         </>
       )}
       {error && <Alert>{error}</Alert>}
+    </Section>
+  );
+}
+
+// はじめての使い方（初回ガイド）を、いつでも見直せる
+function GuideSection() {
+  const [open, setOpen] = useState(false);
+  return (
+    <Section title="使い方">
+      <Button variant="soft" onClick={() => setOpen(true)}>はじめての使い方を見る</Button>
+      {open && <FirstRunGuide force onClose={() => setOpen(false)} />}
     </Section>
   );
 }

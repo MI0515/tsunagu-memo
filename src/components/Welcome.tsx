@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AppTitle, Alert, Card, LinkButton, Page, Phrases } from "@/components/ui";
 import { DemoBanner } from "@/components/DemoBanner";
 import { DemoStart } from "@/components/DemoStart";
+import { FirstRunGuide } from "@/components/FirstRunGuide";
 import { IS_DEMO } from "@/lib/appMode";
 import { useDevice } from "@/lib/device";
 
@@ -12,6 +13,7 @@ export function Welcome({ error }: { error?: string | null }) {
   const device = useDevice();
   return (
     <Page>
+      <FirstRunGuide />
       <DemoBanner />
       <AppTitle sub="大切にしたいことを、一緒に思い出す" />
       {error && <Alert>{error}</Alert>}
