@@ -6,12 +6,13 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { Alert, Button, ConfirmSheet, EmptyState, Field, LinkButton, Loading, PageTitle, Phrases, Sheet, TextArea } from "@/components/ui";
 import { useRoom } from "@/components/rooms";
 import {
-  addMemoItem, addToDay, deleteMemo, deleteMemoItem, getMemo, lastSelection, memoItemsInDays, updateMemo, updateMemoItem,
+  addMemoItem, addToDay, deleteMemo, deleteMemoItem, deleteSet, getMemo, lastSelection, listSets, memoItemsInDays, saveSet,
+  updateMemo, updateMemoItem,
 } from "@/lib/api";
 import { addDays } from "@/lib/date";
 import { errorMessage } from "@/lib/errors";
 import { copyText, tapFeedback } from "@/lib/feedback";
-import { LIMITS, type Memo, type MemoItem } from "@/lib/types";
+import { LIMITS, type Memo, type MemoItem, type SelectionSet } from "@/lib/types";
 import { useRealtime } from "@/lib/useRealtime";
 import { useToday } from "@/lib/useToday";
 
@@ -22,6 +23,7 @@ type Panel =
   | { kind: "edit-item"; item: MemoItem; number: number }
   | { kind: "rename" }
   | { kind: "delete-memo" }
+  | { kind: "sets" }
   | null;
 
 type Notice = { text: string; link?: { href: string; label: string } };
@@ -251,9 +253,10 @@ export default function MemoPage() {
               明日に追加
             </Button>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <SmallButton outline onClick={selectLast} disabled={busy !== null}>前回と同じ</SmallButton>
-            <SmallButton outline onClick={copyChosen} disabled={chosen.length === 0}>コピー</SmallButton>
+          <div className="grid grid-cols-3 gap-2">
+            <SmallButton outline tight onClick={selectLast} disabled={busy !== null}>前回と同じ</SmallButton>
+            <SmallButton outline tight onClick={() => setPanel({ kind: "sets" })} disabled={busy !== null}>セット</SmallButton>
+            <SmallButton outline tight onClick={copyChosen} disabled={chosen.length === 0}>コピー</SmallButton>
           </div>
         </div>
       )}
@@ -277,6 +280,18 @@ export default function MemoPage() {
         <EditItemSheet item={panel.item} number={panel.number} onClose={() => setPanel(null)} onChanged={load} />
       )}
       {panel?.kind === "rename" && <RenameSheet memo={memo} onClose={() => setPanel(null)} onChanged={load} />}
+      {panel?.kind === "sets" && (
+        <SetsSheet
+          roomId={room.id}
+          items={items}
+          selectedIds={chosen.map((i) => i.id)}
+          onApply={(name, ids) => {
+            setSelected(new Set(ids));
+            setNotice({ text: `「${name}」の${ids.length}項目を選びました。` });
+          }}
+          onClose={() => setPanel(null)}
+        />
+      )}
       {panel?.kind === "delete-memo" && (
         <DeleteMemoSheet
           memo={memo}
@@ -303,10 +318,12 @@ function ModeButton({ active = false, onClick, children }: { active?: boolean; o
   );
 }
 
-function SmallButton({ onClick, disabled, outline = false, children }: {
+function SmallButton({ onClick, disabled, outline = false, tight = false, children }: {
   onClick: () => void;
   disabled?: boolean;
   outline?: boolean;
+  // 3つ並べる時など、狭い所では左右の余白を小さくする
+  tight?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -316,7 +333,7 @@ function SmallButton({ onClick, disabled, outline = false, children }: {
         onClick();
       }}
       disabled={disabled}
-      className={`min-h-11 whitespace-nowrap rounded-full px-3 text-sm font-bold text-primary active:bg-surface disabled:opacity-40 ${
+      className={`min-h-11 whitespace-nowrap rounded-full text-sm font-bold text-primary active:bg-surface disabled:opacity-40 ${tight ? "px-1" : "px-3"} ${
         outline ? "border-2 border-border" : ""
       }`}
     >
@@ -547,5 +564,149 @@ function DeleteMemoSheet({ memo, itemCount, onClose, onDeleted }: {
       onConfirm={confirm}
       onCancel={onClose}
     />
+  );
+}
+
+// 名前を付けて保存したセット。いまの選び方を保存したり、保存したセットで選び直したりする
+function SetsSheet({ roomId, items, selectedIds, onApply, onClose }: {
+  roomId: string;
+  items: MemoItem[];
+  selectedIds: string[];
+  onApply: (name: string, ids: string[]) => void;
+  onClose: () => void;
+}) {
+  const [sets, setSets] = useState<SelectionSet[] | null>(null);
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<SelectionSet | null>(null);
+  const here = new Set(items.map((i) => i.id));
+
+  const load = useCallback(async () => {
+    try {
+      setSets(await listSets(roomId));
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  }, [roomId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await saveSet(roomId, name.trim(), selectedIds);
+      setName("");
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (deleting) {
+    return (
+      <ConfirmSheet
+        title="セットを削除"
+        message={<p>「{deleting.name}」を削除します。メモの項目と、これまでの確認リストは消えません。</p>}
+        busy={busy}
+        error={error}
+        onConfirm={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await deleteSet(deleting.id);
+            setDeleting(null);
+            await load();
+          } catch (e) {
+            setError(errorMessage(e));
+          } finally {
+            setBusy(false);
+          }
+        }}
+        onCancel={() => setDeleting(null)}
+      />
+    );
+  }
+
+  const full = (sets?.length ?? 0) >= LIMITS.setsPerRoom;
+
+  return (
+    <Sheet title="保存したセット" onClose={onClose}>
+      <div className="flex flex-col gap-4">
+        {selectedIds.length > 0 ? (
+          full ? (
+            <p className="text-sm text-muted">セットは{LIMITS.setsPerRoom}個までです。いらないセットを削除すると、保存できます。</p>
+          ) : (
+            <form onSubmit={save} className="flex flex-col gap-2 rounded-2xl bg-surface p-3">
+              <Field
+                id="set-name"
+                label={`いま選んでいる${selectedIds.length}項目を保存`}
+                hint="例：出張の日、週末"
+                maxLength={LIMITS.setName}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <Button type="submit" loading={busy} disabled={!name.trim()}>名前を付けて保存</Button>
+            </form>
+          )
+        ) : (
+          <p className="rounded-2xl bg-surface p-3 text-sm text-muted">
+            項目を選んでからここを開くと、その選び方に名前を付けて保存できます。
+          </p>
+        )}
+
+        {error && <Alert>{error}</Alert>}
+
+        {!sets ? (
+          <Loading />
+        ) : sets.length === 0 ? (
+          <p className="text-sm text-muted">保存したセットは、まだありません。</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {sets.map((set) => {
+              const inHere = set.item_ids.filter((id) => here.has(id));
+              const elsewhere = set.item_ids.length - inHere.length;
+              return (
+                <li key={set.id} className="flex items-center gap-2 rounded-2xl border-2 border-border px-3 py-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-bold leading-snug">{set.name}</span>
+                    <span className="text-xs text-muted">
+                      このメモの{inHere.length}項目{elsewhere > 0 && `（ほかのメモの${elsewhere}項目は、そのメモで選べます）`}
+                    </span>
+                  </span>
+                  <button
+                    onClick={() => {
+                      tapFeedback();
+                      onApply(set.name, inHere);
+                      onClose();
+                    }}
+                    disabled={inHere.length === 0}
+                    className="min-h-11 shrink-0 whitespace-nowrap rounded-full bg-primary px-4 text-sm font-bold text-on-primary active:scale-95 disabled:opacity-40"
+                  >
+                    選ぶ
+                  </button>
+                  <button
+                    onClick={() => {
+                      tapFeedback();
+                      setDeleting(set);
+                    }}
+                    aria-label={`「${set.name}」を削除`}
+                    className="min-h-11 shrink-0 whitespace-nowrap rounded-full px-2 text-sm text-muted active:bg-surface"
+                  >
+                    削除
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </Sheet>
   );
 }

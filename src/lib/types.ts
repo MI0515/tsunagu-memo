@@ -25,7 +25,17 @@ export const LIMITS = {
   memoItem: 80,
   memosPerRoom: 10,
   itemsPerMemo: 30,
+  setName: 20,
+  setsPerRoom: 10,
 } as const;
+
+// 名前を付けて保存した選択セット
+export type SelectionSet = {
+  id: string;
+  name: string;
+  created_at: string;
+  item_ids: string[];
+};
 
 export type Member = {
   user_id: string;

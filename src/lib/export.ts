@@ -30,12 +30,14 @@ type CheckRow = { entry_id: string; slot: "morning" | "night"; user_id: string; 
 type ReflectionRow = { id: string; date: string; author_id: string; body: string; created_at: string; updated_at: string };
 type NoteRow = { id: string; reflection_id: string; author_id: string; body: string; created_at: string; updated_at: string };
 type StarRow = { date: string; created_at: string };
+type SetRow = { id: string; name: string; created_at: string };
+type SetItemRow = { set_id: string; memo_item_id: string };
 
 export type ExportData = Awaited<ReturnType<typeof collect>>;
 
 // ルームの記録を集めて、日付ごとにまとめた形にする
 export async function collect(room: { id: string; name: string }) {
-  const [members, memos, items, entries, checks, reflections, notes, stars] = await Promise.all([
+  const [members, memos, items, entries, checks, reflections, notes, stars, sets, setItems] = await Promise.all([
     fetchAll<MemberRow>("room_members", "user_id, display_name, role, color, emoji, joined_at, left_at", room.id, ["joined_at"]),
     fetchAll<MemoRow>("memos", "id, title, description, position, created_at", room.id, ["position", "created_at"]),
     fetchAll<MemoItemRow>("memo_items", "id, memo_id, body, position, created_at", room.id, ["position", "created_at"]),
@@ -44,6 +46,8 @@ export async function collect(room: { id: string; name: string }) {
     fetchAll<ReflectionRow>("reflections", "id, date, author_id, body, created_at, updated_at", room.id, ["date", "created_at"]),
     fetchAll<NoteRow>("reflection_notes", "id, reflection_id, author_id, body, created_at, updated_at", room.id, ["created_at"]),
     fetchAll<StarRow>("day_stars", "date, created_at", room.id, ["date"]),
+    fetchAll<SetRow>("selection_sets", "id, name, created_at", room.id, ["created_at"]),
+    fetchAll<SetItemRow>("selection_set_items", "set_id, memo_item_id", room.id, ["set_id"]),
   ]);
 
   const nameOf = (userId: string) => {
@@ -73,6 +77,12 @@ export async function collect(room: { id: string; name: string }) {
       description: memo.description,
       created_at: memo.created_at,
       items: items.filter((i) => i.memo_id === memo.id).map((i) => ({ id: i.id, body: i.body, created_at: i.created_at })),
+    })),
+    selection_sets: sets.map((set) => ({
+      id: set.id,
+      name: set.name,
+      created_at: set.created_at,
+      memo_item_ids: setItems.filter((x) => x.set_id === set.id).map((x) => x.memo_item_id),
     })),
     days: dates.map((date) => ({
       date,

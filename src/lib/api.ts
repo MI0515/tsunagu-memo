@@ -2,7 +2,7 @@
 
 import { getSupabase } from "./supabase";
 import { AppError, toAppError } from "./errors";
-import type { Check, DayEntry, Memo, MemoItem, MemoSummary, Member, Reflection } from "./types";
+import type { Check, DayEntry, Memo, MemoItem, MemoSummary, Member, Reflection, SelectionSet } from "./types";
 
 type Result<T> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -203,6 +203,41 @@ export const addToDay = (roomId: string, date: string, memoItemIds: string[]) =>
     p_date: date,
     p_memo_item_ids: memoItemIds,
   });
+
+// 名前を付けて保存したセット（ルームのみんなで使う）
+export async function listSets(roomId: string): Promise<SelectionSet[]> {
+  const { data, error } = await getSupabase()
+    .from("selection_sets")
+    .select("id, name, created_at, selection_set_items(memo_item_id)")
+    .eq("room_id", roomId)
+    .order("created_at");
+  if (error) throw toAppError(error);
+  return (data ?? []).map((s) => ({
+    id: s.id,
+    name: s.name,
+    created_at: s.created_at,
+    item_ids: ((s.selection_set_items ?? []) as { memo_item_id: string }[]).map((i) => i.memo_item_id),
+  }));
+}
+
+export async function saveSet(roomId: string, name: string, memoItemIds: string[]) {
+  const sb = getSupabase();
+  const { data, error } = await sb.from("selection_sets")
+    .insert({ room_id: roomId, name, created_by: await currentUserId() }).select("id").single();
+  if (error) throw toAppError(error);
+  const { error: itemsError } = await sb.from("selection_set_items")
+    .insert(memoItemIds.map((id) => ({ set_id: data.id, memo_item_id: id, room_id: roomId })));
+  if (itemsError) {
+    // 項目を入れられなかった時は、空のセットを残さない
+    await sb.from("selection_sets").delete().eq("id", data.id);
+    throw toAppError(itemsError);
+  }
+}
+
+export async function deleteSet(setId: string) {
+  const { error } = await getSupabase().from("selection_sets").delete().eq("id", setId);
+  if (error) throw toAppError(error);
+}
 
 // 前回選んだメモ項目のID
 export async function lastSelection(roomId: string): Promise<string[]> {

@@ -198,6 +198,25 @@ check('その日だけの項目を足せる', !!adhoc)
 await expectErr('その日だけの項目は今日・明日だけ', as(U.B, `insert into public.day_entries (room_id, date, body, created_by) values ($1, public.jst_today() + 5, 'x', $2)`, [room, U.B]))
 await expectErr('メモ項目つきは直接入れられない（add_to_day経由）', as(U.B, `insert into public.day_entries (room_id, date, body, memo_item_id, created_by) values ($1, public.jst_today() + 1, 'x', $2, $3)`, [room, mi1.id, U.B]))
 
+// --- 名前を付けて保存したセット
+console.log('[保存したセット]')
+const [set1] = await as(U.B, `insert into public.selection_sets (room_id, name, created_by) values ($1, '出張の日', $2) returning id`, [room, U.B])
+await as(U.B, `insert into public.selection_set_items (set_id, memo_item_id, room_id) values ($1, $2, $3), ($1, $4, $3)`, [set1.id, mi2.id, room, mi3.id])
+check('メンバーはセットを保存できる', (await as(U.A, `select memo_item_id from public.selection_set_items where set_id = $1`, [set1.id])).length === 2)
+check('ほかのルームの人はセットを見られない', (await as(U.C, `select * from public.selection_sets`)).length === 0)
+await expectErr('他人名義ではセットを作れない', as(U.B, `insert into public.selection_sets (room_id, name, created_by) values ($1, 'x', $2)`, [room, U.A]))
+await expectErr('別ルームのメモ項目はセットに入れられない',
+  as(U.B, `insert into public.selection_set_items (set_id, memo_item_id, room_id) values ($1, (select id from public.memo_items where room_id = $2 limit 1), $3)`, [set1.id, legacyRoom, room]))
+await expectErr('セット名は20文字まで', as(U.B, `insert into public.selection_sets (room_id, name, created_by) values ($1, repeat('あ', 21), $2)`, [room, U.B]))
+for (let i = 0; i < 9; i++) await as(U.B, `insert into public.selection_sets (room_id, name, created_by) values ($1, $2, $3)`, [room, `セット${i}`, U.B])
+await expectErr('1ルームのセットは10個まで', as(U.B, `insert into public.selection_sets (room_id, name, created_by) values ($1, '11個目', $2)`, [room, U.B]))
+await as(U.A, `delete from public.selection_sets where room_id = $1 and name like 'セット%'`, [room])
+check('メンバーはセットを削除できる', await count(`select 1 from public.selection_sets where room_id = $1`, [room]) === 1)
+const [mi4] = await as(U.B, `insert into public.memo_items (memo_id, room_id, body) values ($1, $2, 'あとで消す項目') returning id`, [memo.id, room])
+await as(U.B, `insert into public.selection_set_items (set_id, memo_item_id, room_id) values ($1, $2, $3)`, [set1.id, mi4.id, room])
+await as(U.B, `delete from public.memo_items where id = $1`, [mi4.id])
+check('メモの項目を消すと、セットからも外れる', (await as(U.A, `select 1 from public.selection_set_items where set_id = $1`, [set1.id])).length === 2)
+
 // --- ☀️🌙チェック
 console.log('[チェック]')
 const entries = await as(U.A, `select id, memo_item_id from public.day_entries where room_id = $1 and date = public.jst_today() order by position`, [room])
