@@ -58,3 +58,27 @@ export function formatDayWithYear(date: string): string {
     weekday: "short",
   });
 }
+
+// 月は "YYYY-MM" で扱う
+export function monthOf(date: string): string {
+  return date.slice(0, 7);
+}
+
+export function addMonths(month: string, months: number): string {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + months, 1));
+  return d.toISOString().slice(0, 7);
+}
+
+// その月の初日と末日
+export function monthRange(month: string): { from: string; to: string } {
+  const from = `${month}-01`;
+  const to = addDays(`${addMonths(month, 1)}-01`, -1);
+  return { from, to };
+}
+
+// 例：2026年10月
+export function formatMonth(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return `${y}年${m}月`;
+}

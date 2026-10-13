@@ -293,15 +293,71 @@ export type DaySummary = {
   starred: boolean;
 };
 
-export async function listDays(roomId: string, options: { starredOnly?: boolean } = {}) {
+// 記録のある日の一覧。from・to（"YYYY-MM-DD"）で期間を、starredOnly でお気に入りだけに絞る
+export async function listDays(roomId: string, options: { starredOnly?: boolean; from?: string; to?: string } = {}) {
   const sb = getSupabase();
   const [days, members] = await Promise.all([
-    sb.rpc("day_summaries", { p_room_id: roomId, p_starred_only: options.starredOnly ?? false }),
+    sb.rpc("day_summaries", {
+      p_room_id: roomId,
+      p_starred_only: options.starredOnly ?? false,
+      p_from: options.from ?? null,
+      p_to: options.to ?? null,
+    }),
     sb.from("room_members").select("user_id, display_name, role, color, emoji, left_at").eq("room_id", roomId),
   ]);
   const error = days.error ?? members.error;
   if (error) throw toAppError(error);
   return { days: (days.data ?? []) as DaySummary[], members: (members.data ?? []) as Member[] };
+}
+
+// ---------------------------------------------------------------
+// 検索（確認リストの文・振り返り・追記から探す）
+// ---------------------------------------------------------------
+export type SearchHit = {
+  key: string;
+  date: string;
+  kind: "entry" | "reflection" | "note";
+  body: string;
+  author_id: string | null;
+};
+
+const SEARCH_LIMIT = 100;
+
+// 「%」「_」は検索の記号なので、ふつうの文字として探せるようにする
+function likePattern(q: string) {
+  return `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+}
+
+export async function searchRecords(roomId: string, query: string): Promise<{ hits: SearchHit[]; members: Member[]; capped: boolean }> {
+  const sb = getSupabase();
+  const pattern = likePattern(query.trim());
+  const [entries, reflections, notes, members] = await Promise.all([
+    sb.from("day_entries").select("id, date, body").eq("room_id", roomId).ilike("body", pattern)
+      .order("date", { ascending: false }).limit(SEARCH_LIMIT),
+    sb.from("reflections").select("id, date, body, author_id").eq("room_id", roomId).ilike("body", pattern)
+      .order("date", { ascending: false }).limit(SEARCH_LIMIT),
+    sb.from("reflection_notes").select("id, body, author_id, reflections(date)").eq("room_id", roomId).ilike("body", pattern)
+      .order("created_at", { ascending: false }).limit(SEARCH_LIMIT),
+    sb.from("room_members").select("user_id, display_name, role, color, emoji, left_at").eq("room_id", roomId),
+  ]);
+  const error = entries.error ?? reflections.error ?? notes.error ?? members.error;
+  if (error) throw toAppError(error);
+
+  const order = { entry: 0, reflection: 1, note: 2 };
+  const hits: SearchHit[] = [
+    ...(entries.data ?? []).map((e) => ({ key: `e-${e.id}`, date: e.date, kind: "entry" as const, body: e.body, author_id: null })),
+    ...(reflections.data ?? []).map((r) => ({ key: `r-${r.id}`, date: r.date, kind: "reflection" as const, body: r.body, author_id: r.author_id })),
+    ...(notes.data ?? []).map((n) => ({
+      key: `n-${n.id}`,
+      date: (n.reflections as unknown as { date: string } | null)?.date ?? "",
+      kind: "note" as const,
+      body: n.body,
+      author_id: n.author_id,
+    })),
+  ].sort((a, b) => (a.date === b.date ? order[a.kind] - order[b.kind] : a.date < b.date ? 1 : -1));
+
+  const capped = [entries.data, reflections.data, notes.data].some((d) => (d?.length ?? 0) >= SEARCH_LIMIT);
+  return { hits, members: (members.data ?? []) as Member[], capped };
 }
 
 // ---------------------------------------------------------------
