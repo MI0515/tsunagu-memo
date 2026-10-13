@@ -46,7 +46,7 @@ with problems as (
   select 'サーバー専用の関数が呼べてしまう', p.proname::text
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
-    and p.proname in ('run_daily_maintenance', 'list_orphan_anonymous_users', 'keepalive_check')
+    and p.proname in ('run_daily_maintenance', 'list_orphan_anonymous_users', 'keepalive_check', 'reset_demo', 'seed_demo_room')
     and has_function_privilege('authenticated', p.oid, 'execute')
 
   -- 8. サーバーが呼べるはずの関数を呼べない
@@ -54,7 +54,7 @@ with problems as (
   select 'サーバーが関数を呼べない', p.proname::text
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
-    and p.proname in ('run_daily_maintenance', 'list_orphan_anonymous_users', 'keepalive_check')
+    and p.proname in ('run_daily_maintenance', 'list_orphan_anonymous_users', 'keepalive_check', 'reset_demo', 'seed_demo_room')
     and not has_function_privilege('service_role', p.oid, 'execute')
 
   -- 9. リアルタイム同期の対象になっていない表（9個のはず）

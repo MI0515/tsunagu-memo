@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { AppTitle, Alert, Card, LinkButton, Page, Phrases } from "@/components/ui";
+import { DemoBanner } from "@/components/DemoBanner";
+import { DemoStart } from "@/components/DemoStart";
+import { IS_DEMO } from "@/lib/appMode";
 import { useDevice } from "@/lib/device";
 
 // まだどのルームにも入っていない人向けの画面
@@ -9,6 +12,7 @@ export function Welcome({ error }: { error?: string | null }) {
   const device = useDevice();
   return (
     <Page>
+      <DemoBanner />
       <AppTitle sub="大切にしたいことを、一緒に思い出す" />
       {error && <Alert>{error}</Alert>}
       <Card className="flex flex-col gap-3">
@@ -17,6 +21,7 @@ export function Welcome({ error }: { error?: string | null }) {
           押したスタンプは、ルームのみんなにすぐ届きます。
         </p>
       </Card>
+      {IS_DEMO && <DemoStart />}
       {/* ホーム画面のアプリとして開いた時は、引き継ぎを一番上に出す */}
       {device?.standalone && (
         <Card className="flex flex-col gap-3">
@@ -25,7 +30,9 @@ export function Welcome({ error }: { error?: string | null }) {
         </Card>
       )}
       <div className="flex flex-col gap-3">
-        <LinkButton href="/create" variant={device?.standalone ? "soft" : "primary"}>ルームを作る</LinkButton>
+        <LinkButton href="/create" variant={device?.standalone || IS_DEMO ? "soft" : "primary"}>
+          {IS_DEMO ? "空のルームを作る" : "ルームを作る"}
+        </LinkButton>
         <p className="text-center text-sm text-muted"><Phrases text="招待された方は、受け取った招待リンクを開いてください。" /></p>
         {!device?.standalone && (
           <Link href="/handoff" className="text-center text-sm text-primary underline underline-offset-4">

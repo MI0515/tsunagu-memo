@@ -6,6 +6,7 @@ import { Welcome } from "@/components/Welcome";
 import { currentUserId, listMyRooms, type MyRoom } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import { tapFeedback } from "@/lib/feedback";
+import { readLastRoom, saveLastRoom } from "@/lib/lastRoom";
 
 type RoomContextValue = {
   rooms: MyRoom[];
@@ -22,24 +23,6 @@ export function useRoom(): RoomContextValue {
   const value = useContext(RoomContext);
   if (!value) throw new Error("useRoom は RoomProvider の中で使ってください");
   return value;
-}
-
-const LAST_ROOM_KEY = "tsunagu:lastRoom";
-
-function readLastRoom() {
-  try {
-    return localStorage.getItem(LAST_ROOM_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function saveLastRoom(id: string) {
-  try {
-    localStorage.setItem(LAST_ROOM_KEY, id);
-  } catch {
-    // 保存できない環境でも、そのまま使える
-  }
 }
 
 // 自分のルームを読み込む。ルームがなければ、はじめての人向けの画面を出す

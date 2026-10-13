@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Page } from "@/components/ui";
+import { DemoBanner } from "@/components/DemoBanner";
 import { RoomHeader, RoomProvider } from "@/components/rooms";
 import { TabBar } from "@/components/TabBar";
 
@@ -10,6 +11,7 @@ export default function TabsLayout({ children }: { children: ReactNode }) {
   return (
     <RoomProvider>
       <Page withTabs>
+        <DemoBanner />
         <RoomHeader />
         {children}
       </Page>

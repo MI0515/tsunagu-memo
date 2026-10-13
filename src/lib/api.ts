@@ -463,6 +463,22 @@ export async function redeemIdentity(secret: string, captchaToken?: string) {
   return rpc<object>("redeem_identity", { p_secret: secret });
 }
 
+// ---------------------------------------------------------------
+// デモ：見本ルームを作って、見本の相手と見本のデータを入れる
+// ---------------------------------------------------------------
+export async function startDemo(captchaToken?: string): Promise<string> {
+  const session = await ensureSession(captchaToken);
+  const { room_id } = await createRoom("見本のルーム", "あなた", null);
+  const res = await fetch("/api/demo/start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ roomId: room_id }),
+  });
+  // 見本のデータが入らなくても、ルームは使えるので先へ進む
+  if (!res.ok) console.warn("demo seed failed", res.status);
+  return room_id;
+}
+
 export type ActiveInvite = { token: string; expires_at: string } | null;
 
 // いま使える招待リンク（オーナーだけが読める）

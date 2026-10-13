@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Alert, AppTitle, Button, Card, Field, LinkButton, Loading, Page } from "@/components/ui";
 import { useCaptcha } from "@/components/captcha";
-import { saveLastRoom } from "@/components/rooms";
+import { saveLastRoom } from "@/lib/lastRoom";
 import { ensureSession, getInviteInfo, joinRoom } from "@/lib/api";
 import { AppError, errorMessage } from "@/lib/errors";
 

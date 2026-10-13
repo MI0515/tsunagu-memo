@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // - データベースに生存記録を書き、Supabase 無料プランの一時停止（7日間使われないと止まる）を防ぐ
 // - 古いロック記録などを片づけ、使われないルームを整理する
 // - どのルームにも入っていない、30日以上前の匿名ユーザーを削除する
+// デモ環境では、作ってから24時間たったルームを消し（毎日のリセット）、空のユーザーも24時間で片づける
 // 合言葉（CRON_SECRET）を知っている呼び出しだけを受け付ける。Vercel Cron は自動で付けてくれる。
 
 export const dynamic = "force-dynamic";
@@ -26,12 +27,23 @@ export async function GET(request: NextRequest) {
   // Vercel Cron からの呼び出しかどうかで、生存記録の名前を分ける（手で試した時は manual）
   const source = request.headers.get("user-agent")?.startsWith("vercel-cron") ? "vercel-cron" : "manual";
 
+  const demo = process.env.NEXT_PUBLIC_APP_MODE === "demo";
+  let demoReset: unknown = null;
+  if (demo) {
+    const { data, error: resetError } = await admin.rpc("reset_demo", { p_hours: 24 });
+    if (resetError) return NextResponse.json({ ok: false, error: resetError.message }, { status: 500 });
+    demoReset = data;
+  }
+
   const { data: maintenance, error } = await admin.rpc("run_daily_maintenance", { p_source: source });
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 
-  const { data: orphans, error: listError } = await admin.rpc("list_orphan_anonymous_users", { p_limit: 100 });
+  const { data: orphans, error: listError } = await admin.rpc("list_orphan_anonymous_users", {
+    p_limit: 100,
+    p_min_age_hours: demo ? 24 : 720,
+  });
   let deletedUsers = 0;
   if (!listError) {
     for (const id of (orphans ?? []) as string[]) {
@@ -40,5 +52,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, source, maintenance, deletedUsers });
+  return NextResponse.json({ ok: true, source, demoReset, maintenance, deletedUsers });
 }

@@ -13,7 +13,7 @@ await db.exec(`
   create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
   create schema auth; create schema extensions;
   grant usage on schema public, extensions, auth to anon, authenticated, service_role;
-  create table auth.users (id uuid primary key, is_anonymous boolean default true, created_at timestamptz default now());
+  create table auth.users (id uuid primary key, is_anonymous boolean default true, created_at timestamptz default now(), raw_user_meta_data jsonb default '{}');
   create function auth.uid() returns uuid language sql stable as $$
     select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   grant execute on function auth.uid() to anon, authenticated, service_role;
@@ -347,6 +347,40 @@ check('⭐のないルームは削除', r.deleted_rooms === 2, r)
 check('⭐のあるルームは残る', r.cleaned_rooms === 1, r)
 check('⭐の日の記録だけ残る', await count(`select 1 from public.day_entries where room_id = $1 and date <> public.jst_today()`, [room]) === 0
   && await count(`select 1 from public.day_entries where room_id = $1`, [room]) > 0)
+
+// --- デモ環境（見本のデータと、毎日のリセット）
+console.log('[デモ]')
+const P = '00000000-0000-0000-0000-0000000000d1'
+await admin(`insert into auth.users (id, is_anonymous, raw_user_meta_data) values ($1, false, '{"demo_partner": "true"}')`, [P])
+const demoRoom = (await rpc(U.H, 'create_room', `'見本のルーム', 'あなた', 'secret-code'`)).room_id
+await expectErr('一般のユーザーは見本を入れられない', rpc(U.H, 'seed_demo_room', `'${demoRoom}', '${P}'`))
+await expectErr('一般のユーザーはリセットできない', rpc(U.H, 'reset_demo', '1'))
+const asServer = async (sql) => { await db.exec('set role service_role'); try { return (await db.query(sql)).rows[0].r } finally { await db.exec('reset role') } }
+r = await asServer(`select public.seed_demo_room('${demoRoom}', '${P}') r`)
+check('本番の設定（is_demo=false）では見本は入らない', r.error === 'not_demo', r)
+r = await asServer(`select public.reset_demo(0) r`)
+check('本番の設定ではリセットしない', r.error === 'not_demo' && await count(`select 1 from public.rooms`) > 0, r)
+await admin(`update public.app_settings set is_demo = true`)
+r = await asServer(`select public.seed_demo_room('${demoRoom}', '${P}') r`)
+check('デモでは見本が入る', r.ok, r)
+check('見本の相手は色2・🐰', JSON.stringify(await as(U.H, `select display_name, color, emoji from public.room_members where user_id = $1`, [P]))
+  === JSON.stringify([{ display_name: '見本の相手', color: 2, emoji: '🐰' }]))
+check('今日の確認リスト3つ・相手だけが☀️を2つ', await count(`select 1 from public.day_entries where room_id = $1 and date = public.jst_today()`, [demoRoom]) === 3
+  && await count(`select 1 from public.checks where room_id = $1 and date = public.jst_today() and user_id = $2`, [demoRoom, P]) === 2)
+check('昨日は振り返りとお気に入りつき', await count(`select 1 from public.reflections where room_id = $1 and date = public.jst_today() - 1`, [demoRoom]) === 1
+  && await count(`select 1 from public.day_stars where room_id = $1`, [demoRoom]) === 1)
+r = await asServer(`select public.seed_demo_room('${demoRoom}', '${P}') r`)
+check('見本は1回だけ', r.error === 'already_seeded', r)
+await admin(`update public.rooms set created_at = now() - interval '25 hours' where id <> $1`, [demoRoom])
+r = await asServer(`select public.reset_demo(24) r`)
+check('24時間たったルームだけ消える', r.ok && await count(`select 1 from public.rooms`) === 1 && await count(`select 1 from public.rooms where id = $1`, [demoRoom]) === 1, r)
+await admin(`delete from public.rooms where id = $1`, [demoRoom])
+await admin(`update auth.users set created_at = now() - interval '2 days' where id = $1`, [P])
+await db.exec('set role service_role')
+const orphans = (await db.query(`select * from public.list_orphan_anonymous_users(100, 24) id`)).rows.map((x) => x.id)
+await db.exec('reset role')
+check('見本の相手も、片づけの対象になる', orphans.includes(P), orphans)
+await admin(`update public.app_settings set is_demo = false`)
 
 console.log(fails ? `\n${fails} 件失敗` : '\nすべて成功')
 process.exit(fails ? 1 : 0)
