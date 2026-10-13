@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Alert, Button, EmptyState, Field, Loading, PageTitle, Phrases, Sheet } from "@/components/ui";
+import { Alert, Button, EmptyState, Field, Loading, PageTitle, Phrases, Sheet, TextArea } from "@/components/ui";
 import { useRoom } from "@/components/rooms";
 import { createMemo, listMemos } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
@@ -64,6 +64,9 @@ export default function MemosPage() {
               >
                 <span className="min-w-0 flex-1">
                   <span className="block font-bold leading-snug">{memo.title}</span>
+                  {memo.description && (
+                    <span className="mt-0.5 line-clamp-2 block text-sm leading-snug text-muted">{memo.description}</span>
+                  )}
                   <span className="text-sm text-muted">{memo.item_count}項目</span>
                 </span>
                 <span aria-hidden className="shrink-0 text-xl text-muted">›</span>
@@ -91,6 +94,7 @@ export default function MemosPage() {
 function CreateMemoSheet({ roomId, position, onClose }: { roomId: string; position: number; onClose: () => void }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,7 +103,7 @@ function CreateMemoSheet({ roomId, position, onClose }: { roomId: string; positi
     setBusy(true);
     setError(null);
     try {
-      const id = await createMemo(roomId, title.trim(), position);
+      const id = await createMemo(roomId, title.trim(), description.trim(), position);
       router.push(`/memos/${id}`);
     } catch (err) {
       setError(errorMessage(err));
@@ -119,6 +123,15 @@ function CreateMemoSheet({ roomId, position, onClose }: { roomId: string; positi
           onChange={(e) => setTitle(e.target.value)}
           autoFocus
           required
+        />
+        <TextArea
+          id="memo-description"
+          label="説明（なくても大丈夫）"
+          hint="どんな時に読むメモか"
+          maxLength={LIMITS.memoDescription}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={2}
         />
         {error && <Alert>{error}</Alert>}
         <Button type="submit" loading={busy} disabled={!title.trim()}>作る</Button>

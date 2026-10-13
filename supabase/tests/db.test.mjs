@@ -100,9 +100,25 @@ r = await rpc(U.A, 'create_room', `'テスト', 'みー', 'secret-code'`)
 check('正しいコードで作れる', r.ok, r)
 const room = r.room_id
 const token = (await admin(`select token from public.invites where room_id = $1`, [room]))[0].token
-check('初期メモ2つ（5項目と3項目）', JSON.stringify(await admin(
-  `select m.title, count(i.*)::int n from public.memos m join public.memo_items i on i.memo_id = m.id where m.room_id = $1 group by m.title, m.position order by m.position`, [room]))
-  === JSON.stringify([{ title: '普段と違う予定の日', n: 5 }, { title: '送る言葉', n: 3 }]))
+const seeded = await admin(
+  `select m.title, m.description is not null and m.description <> '' as has_desc, count(i.*)::int n
+   from public.memos m join public.memo_items i on i.memo_id = m.id where m.room_id = $1
+   group by m.title, m.description, m.position order by m.position`, [room])
+check('初期メモ3つが正しい順番（5項目・5項目・3項目）', JSON.stringify(seeded) === JSON.stringify([
+  { title: '日々、大切にしたいこと', has_desc: true, n: 5 },
+  { title: '普段と違う予定の日', has_desc: true, n: 5 },
+  { title: '送る言葉', has_desc: true, n: 3 },
+]), seeded)
+check('各メモの1つ目の項目が正しい', JSON.stringify((await admin(
+  `select i.body from public.memos m join public.memo_items i on i.memo_id = m.id where m.room_id = $1 and i.position = 1 order by m.position`, [room])).map((x) => x.body))
+  === JSON.stringify([
+    '不平不満を感じたときは、当たり前になっている感謝を忘れていないか振り返る',
+    '予定が分かった時点で、連絡が難しくなりそうな時間帯と、連絡できそうなタイミングを共有する',
+    '無事です。今は○○にいます。',
+  ]))
+check('古い初期メモの項目は入らない', await count(
+  `select 1 from public.memo_items where room_id = $1 and (body like '%メモを確認%' or body like '%できたか振り返る%')`, [room]) === 0)
+check('既存のルームのメモは変わらない（2つのまま）', await count(`select 1 from public.memos where room_id = $1`, [legacyRoom]) === 2)
 check('作成者は色1・🐻', JSON.stringify(await as(U.A, `select color, emoji, role from public.room_members where user_id = $1 and room_id = $2`, [U.A, room]))
   === JSON.stringify([{ color: 1, emoji: '🐻', role: 'owner' }]))
 
@@ -147,13 +163,17 @@ const [mi3] = await as(U.B, `insert into public.memo_items (memo_id, room_id, bo
 check('メンバーはメモと項目を作れる', (await as(U.A, `select * from public.memo_items where memo_id = $1`, [memo.id])).length === 3)
 await as(U.A, `update public.memo_items set body = '相手を思いやり、本音も伝える' where id = $1`, [mi1.id])
 check('ほかのメンバーも項目を直せる', (await as(U.B, `select body from public.memo_items where id = $1`, [mi1.id]))[0].body === '相手を思いやり、本音も伝える')
+await as(U.B, `update public.memos set description = 'みんなで直した説明' where id = $1`, [memo.id])
+check('メンバーはメモの説明を直せる', (await as(U.A, `select description from public.memos where id = $1`, [memo.id]))[0].description === 'みんなで直した説明')
+await expectErr('説明は200文字まで', as(U.B, `update public.memos set description = repeat('あ', 201) where id = $1`, [memo.id]))
+await expectErr('メモを別ルームに移せない', as(U.B, `update public.memos set room_id = $1 where id = $2`, [legacyRoom, memo.id]))
 await expectErr('項目は80文字まで', as(U.B, `insert into public.memo_items (memo_id, room_id, body) values ($1, $2, repeat('あ', 81))`, [memo.id, room]))
 const [other] = await as(U.L1, `select id from public.memos where room_id = $1 limit 1`, [legacyRoom])
 await expectErr('別ルームのメモに項目を入れられない', as(U.B, `insert into public.memo_items (memo_id, room_id, body) values ($1, $2, 'x')`, [other.id, room]))
 const [big] = await as(U.B, `insert into public.memos (room_id, title) values ($1, '上限') returning id`, [room])
 for (let i = 0; i < 30; i++) await as(U.B, `insert into public.memo_items (memo_id, room_id, body) values ($1, $2, $3)`, [big.id, room, `項目${i}`])
 await expectErr('1メモ30項目まで', as(U.B, `insert into public.memo_items (memo_id, room_id, body) values ($1, $2, '31個目')`, [big.id, room]))
-for (let i = 0; i < 6; i++) await as(U.B, `insert into public.memos (room_id, title) values ($1, $2)`, [room, `メモ${i}`])
+for (let i = 0; i < 5; i++) await as(U.B, `insert into public.memos (room_id, title) values ($1, $2)`, [room, `メモ${i}`])
 await expectErr('1ルームのメモは10個まで', as(U.B, `insert into public.memos (room_id, title) values ($1, '11個目')`, [room]))
 
 // --- 選んで今日・明日に追加

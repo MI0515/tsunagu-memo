@@ -2,6 +2,7 @@ export type Memo = {
   id: string;
   room_id: string;
   title: string;
+  description: string | null;
   position: number;
   created_at: string;
 };
@@ -20,6 +21,7 @@ export type MemoItem = {
 // 文字数・数の上限（データベースの決まりと同じ）
 export const LIMITS = {
   memoTitle: 30,
+  memoDescription: 200,
   memoItem: 80,
   memosPerRoom: 10,
   itemsPerMemo: 30,

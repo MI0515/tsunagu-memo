@@ -89,7 +89,7 @@ export async function listMyRooms(): Promise<MyRoom[]> {
 export async function listMemos(roomId: string): Promise<MemoSummary[]> {
   const { data, error } = await getSupabase()
     .from("memos")
-    .select("id, room_id, title, position, created_at, memo_items(count)")
+    .select("id, room_id, title, description, position, created_at, memo_items(count)")
     .eq("room_id", roomId)
     .order("position")
     .order("created_at");
@@ -104,7 +104,7 @@ export async function listMemos(roomId: string): Promise<MemoSummary[]> {
 export async function getMemo(memoId: string): Promise<{ memo: Memo; items: MemoItem[] } | null> {
   const sb = getSupabase();
   const [memo, items] = await Promise.all([
-    sb.from("memos").select("id, room_id, title, position, created_at").eq("id", memoId).maybeSingle(),
+    sb.from("memos").select("id, room_id, title, description, position, created_at").eq("id", memoId).maybeSingle(),
     sb.from("memo_items").select("id, memo_id, room_id, body, position, created_at")
       .eq("memo_id", memoId).order("position").order("created_at"),
   ]);
@@ -113,15 +113,15 @@ export async function getMemo(memoId: string): Promise<{ memo: Memo; items: Memo
   return memo.data ? { memo: memo.data, items: items.data ?? [] } : null;
 }
 
-export async function createMemo(roomId: string, title: string, position: number): Promise<string> {
+export async function createMemo(roomId: string, title: string, description: string, position: number): Promise<string> {
   const { data, error } = await getSupabase()
-    .from("memos").insert({ room_id: roomId, title, position }).select("id").single();
+    .from("memos").insert({ room_id: roomId, title, description: description || null, position }).select("id").single();
   if (error) throw toAppError(error);
   return data.id;
 }
 
-export async function renameMemo(memoId: string, title: string) {
-  const { error } = await getSupabase().from("memos").update({ title }).eq("id", memoId);
+export async function updateMemo(memoId: string, title: string, description: string) {
+  const { error } = await getSupabase().from("memos").update({ title, description: description || null }).eq("id", memoId);
   if (error) throw toAppError(error);
 }
 

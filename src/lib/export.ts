@@ -23,7 +23,7 @@ async function fetchAll<T>(table: string, select: string, roomId: string, order:
 }
 
 type MemberRow = { user_id: string; display_name: string; role: string; color: number | null; emoji: string | null; joined_at: string; left_at: string | null };
-type MemoRow = { id: string; title: string; position: number; created_at: string };
+type MemoRow = { id: string; title: string; description: string | null; position: number; created_at: string };
 type MemoItemRow = { id: string; memo_id: string; body: string; position: number; created_at: string };
 type EntryRow = { id: string; date: string; body: string; memo_item_id: string | null; position: number; created_at: string };
 type CheckRow = { entry_id: string; slot: "morning" | "night"; user_id: string; date: string; created_at: string };
@@ -37,7 +37,7 @@ export type ExportData = Awaited<ReturnType<typeof collect>>;
 export async function collect(room: { id: string; name: string }) {
   const [members, memos, items, entries, checks, reflections, notes, stars] = await Promise.all([
     fetchAll<MemberRow>("room_members", "user_id, display_name, role, color, emoji, joined_at, left_at", room.id, ["joined_at"]),
-    fetchAll<MemoRow>("memos", "id, title, position, created_at", room.id, ["position", "created_at"]),
+    fetchAll<MemoRow>("memos", "id, title, description, position, created_at", room.id, ["position", "created_at"]),
     fetchAll<MemoItemRow>("memo_items", "id, memo_id, body, position, created_at", room.id, ["position", "created_at"]),
     fetchAll<EntryRow>("day_entries", "id, date, body, memo_item_id, position, created_at", room.id, ["date", "position", "created_at"]),
     fetchAll<CheckRow>("checks", "entry_id, slot, user_id, date, created_at", room.id, ["created_at"]),
@@ -70,6 +70,7 @@ export async function collect(room: { id: string; name: string }) {
     memos: memos.map((memo) => ({
       id: memo.id,
       title: memo.title,
+      description: memo.description,
       created_at: memo.created_at,
       items: items.filter((i) => i.memo_id === memo.id).map((i) => ({ id: i.id, body: i.body, created_at: i.created_at })),
     })),

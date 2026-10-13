@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { Alert, Button, ConfirmSheet, EmptyState, Field, LinkButton, Loading, PageTitle, Phrases, Sheet } from "@/components/ui";
+import { Alert, Button, ConfirmSheet, EmptyState, Field, LinkButton, Loading, PageTitle, Phrases, Sheet, TextArea } from "@/components/ui";
 import { useRoom } from "@/components/rooms";
 import {
-  addMemoItem, addToDay, deleteMemo, deleteMemoItem, getMemo, lastSelection, memoItemsInDays, renameMemo, updateMemoItem,
+  addMemoItem, addToDay, deleteMemo, deleteMemoItem, getMemo, lastSelection, memoItemsInDays, updateMemo, updateMemoItem,
 } from "@/lib/api";
 import { addDays } from "@/lib/date";
 import { errorMessage } from "@/lib/errors";
@@ -171,7 +171,11 @@ export default function MemoPage() {
         )}
       </div>
 
-      <PageTitle sub={<Phrases text={hint} />}>{memo.title}</PageTitle>
+      <div className="flex flex-col gap-1">
+        <PageTitle>{memo.title}</PageTitle>
+        {memo.description && <p className="text-sm leading-relaxed">{memo.description}</p>}
+        <p className="text-sm text-muted"><Phrases text={hint} /></p>
+      </div>
 
       {error && <Alert>{error}</Alert>}
 
@@ -261,7 +265,7 @@ export default function MemoPage() {
           ) : (
             <Button onClick={() => setPanel({ kind: "add" })}>＋ 項目を追加</Button>
           )}
-          <Button variant="soft" onClick={() => setPanel({ kind: "rename" })}>見出しを変える</Button>
+          <Button variant="soft" onClick={() => setPanel({ kind: "rename" })}>見出しと説明を変える</Button>
           <Button variant="ghost" onClick={() => setPanel({ kind: "delete-memo" })}>このメモを削除</Button>
         </div>
       )}
@@ -462,6 +466,8 @@ function EditItemSheet({ item, number, onClose, onChanged }: {
 
 function RenameSheet({ memo, onClose, onChanged }: { memo: Memo; onClose: () => void; onChanged: () => void }) {
   const [title, setTitle] = useState(memo.title);
+  const [description, setDescription] = useState(memo.description ?? "");
+  const unchanged = title.trim() === memo.title && description.trim() === (memo.description ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -470,7 +476,7 @@ function RenameSheet({ memo, onClose, onChanged }: { memo: Memo; onClose: () => 
     setBusy(true);
     setError(null);
     try {
-      await renameMemo(memo.id, title.trim());
+      await updateMemo(memo.id, title.trim(), description.trim());
       onChanged();
       onClose();
     } catch (err) {
@@ -480,7 +486,7 @@ function RenameSheet({ memo, onClose, onChanged }: { memo: Memo; onClose: () => 
   }
 
   return (
-    <Sheet title="見出しを変える" onClose={onClose}>
+    <Sheet title="見出しと説明を変える" onClose={onClose}>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Field
           id="memo-rename"
@@ -491,8 +497,17 @@ function RenameSheet({ memo, onClose, onChanged }: { memo: Memo; onClose: () => 
           autoFocus
           required
         />
+        <TextArea
+          id="memo-description"
+          label="説明（なくても大丈夫）"
+          hint="どんな時に読むメモか"
+          maxLength={LIMITS.memoDescription}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+        />
         {error && <Alert>{error}</Alert>}
-        <Button type="submit" loading={busy} disabled={!title.trim() || title.trim() === memo.title}>保存する</Button>
+        <Button type="submit" loading={busy} disabled={!title.trim() || unchanged}>保存する</Button>
       </form>
     </Sheet>
   );
