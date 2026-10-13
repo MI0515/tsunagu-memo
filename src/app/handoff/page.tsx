@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Alert, AppTitle, Button, Card, Field, Page } from "@/components/ui";
 import { useCaptcha } from "@/components/captcha";
-import { redeemIdentity } from "@/lib/api";
+import { redeemIdentity, secretFromInput } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 
 // 引き継ぎコードを入力して、同じ本人として続きから使う（ホーム画面のアプリ・新しい端末用）
@@ -21,7 +21,7 @@ export default function HandoffPage() {
     setBusy(true);
     setError(null);
     try {
-      await redeemIdentity(code.trim(), captcha.token);
+      await redeemIdentity(secretFromInput(code), captcha.token);
       router.replace("/");
     } catch (err) {
       setError(errorMessage(err));
@@ -32,16 +32,16 @@ export default function HandoffPage() {
 
   return (
     <Page>
-      <AppTitle sub="引き継ぎコードで続きから使う" />
+      <AppTitle sub="引き継ぎコード・復元リンクで続きから使う" />
       <Card>
         <form onSubmit={submit} className="flex flex-col gap-4">
           <p className="text-sm leading-relaxed">
-            Safari（または前の端末）で「設定」→「引き継ぎコードを発行」を押して、表示されたコードを入力してください。
+            Safari（または前の端末）の「設定」で発行した引き継ぎコードを入力してください。保存しておいた復元リンクを、そのまま貼り付けても使えます。
           </p>
           <Field
             id="handoff-code"
-            label="引き継ぎコード"
-            hint="例：ABCD-EFGH-JKLM（10分間・1回だけ使えます）"
+            label="引き継ぎコード または 復元リンク"
+            hint="例：ABCD-EFGH-JKLM（コードは10分間・1回だけ使えます）"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             autoComplete="one-time-code"

@@ -406,6 +406,22 @@ export const deleteRoom = (roomId: string, confirmName: string) =>
 // ---------------------------------------------------------------
 export const issueHandoffCode = () => rpc<{ code: string }>("issue_handoff_code");
 
+// 復元リンク。合言葉は「#」の後ろに入れる（この部分はサーバーに送られないので、通信の記録に残らない）
+export async function issueRestoreLink(): Promise<string> {
+  const { token } = await rpc<{ token: string }>("issue_restore_token");
+  return `${window.location.origin}/restore#${token}`;
+}
+
+// 入力された文字から、復元リンクの合言葉か、引き継ぎコードを取り出す
+export function secretFromInput(input: string): string {
+  const text = input.trim();
+  const hash = text.indexOf("#");
+  const afterHash = hash >= 0 ? text.slice(hash + 1).trim() : text;
+  // 復元リンクの合言葉は 64文字の英数字（0-9, a-f）
+  const token = afterHash.match(/[0-9a-f]{64}/i)?.[0];
+  return token ? token.toLowerCase() : text;
+}
+
 // 引き継ぎコード（または復元用の合言葉）で、今の端末を同じ本人にする
 export async function redeemIdentity(secret: string, captchaToken?: string) {
   await ensureSession(captchaToken);

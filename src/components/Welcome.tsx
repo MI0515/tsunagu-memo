@@ -29,7 +29,7 @@ export function Welcome({ error }: { error?: string | null }) {
         <p className="text-center text-sm text-muted"><Phrases text="招待された方は、受け取った招待リンクを開いてください。" /></p>
         {!device?.standalone && (
           <Link href="/handoff" className="text-center text-sm text-primary underline underline-offset-4">
-            引き継ぎコードをお持ちの方
+            引き継ぎコード・復元リンクをお持ちの方
           </Link>
         )}
       </div>

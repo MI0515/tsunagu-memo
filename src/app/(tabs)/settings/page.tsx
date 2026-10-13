@@ -8,7 +8,7 @@ import { InstallSteps } from "@/components/InstallGuide";
 import { MemberName } from "@/components/MemberName";
 import { useRoom } from "@/components/rooms";
 import {
-  deleteRoom, issueHandoffCode, leaveRoom, listMembers, removeMember, renameRoom, setMemberLook, transferOwner, updateDisplayName,
+  deleteRoom, issueHandoffCode, issueRestoreLink, leaveRoom, listMembers, removeMember, renameRoom, setMemberLook, transferOwner, updateDisplayName,
 } from "@/lib/api";
 import { useDevice } from "@/lib/device";
 import { errorMessage } from "@/lib/errors";
@@ -117,6 +117,8 @@ export default function SettingsPage() {
           </Section>
 
           <HandoffSection />
+
+          <RestoreSection />
 
           <ExportSection room={room} />
 
@@ -595,6 +597,66 @@ function HandoffSection() {
         </div>
       ) : (
         <Button variant="soft" onClick={issue} loading={busy}>引き継ぎコードを発行</Button>
+      )}
+      {error && <Alert>{error}</Alert>}
+    </Section>
+  );
+}
+
+// 復元リンク：機種変更やデータ消去に備えて、自分だけが見られる場所に保存しておくリンク
+function RestoreSection() {
+  const [link, setLink] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canShare = typeof navigator !== "undefined" && "share" in navigator;
+
+  async function issue() {
+    setBusy(true);
+    setError(null);
+    setCopied(false);
+    try {
+      setLink(await issueRestoreLink());
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Section title="復元リンク（機種変更・データ消去に備える）">
+      <p className="text-sm text-muted">
+        このアプリはメールアドレスを使わないため、端末を変えたりブラウザのデータを消したりすると、続きから使えなくなります。
+        復元リンクを、パスワード管理アプリやメモなど、自分だけが見られる場所に保存しておいてください。
+      </p>
+      {link ? (
+        <div className="flex flex-col gap-2 rounded-2xl bg-bg p-3">
+          <p className="break-all rounded-xl bg-surface p-2 font-mono text-xs text-muted">{link}</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="soft" className="whitespace-nowrap" onClick={async () => setCopied(await copyText(link))}>
+              {copied ? "✓ コピー済み" : "コピー"}
+            </Button>
+            {canShare && (
+              <Button
+                variant="soft"
+                className="whitespace-nowrap"
+                onClick={() => navigator.share({ title: "つなぐメモの復元リンク", text: link }).catch(() => {})}
+              >
+                保存先へ送る
+              </Button>
+            )}
+          </div>
+          <p className="text-xs leading-relaxed text-muted">
+            このリンクを知っている人は、あなたとして使えてしまいます。人に送ったり、見せたりしないでください。
+            使うと、それまでの端末ではルームが表示されなくなります。
+          </p>
+        </div>
+      ) : (
+        <>
+          <Button variant="soft" onClick={issue} loading={busy}>復元リンクを発行</Button>
+          <p className="text-xs text-muted">新しく発行すると、前に発行したリンクは使えなくなります。</p>
+        </>
       )}
       {error && <Alert>{error}</Alert>}
     </Section>
