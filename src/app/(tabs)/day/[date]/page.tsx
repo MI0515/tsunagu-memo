@@ -100,7 +100,7 @@ export default function DayPage() {
       ) : (
         <>
           <section className="flex flex-col gap-2">
-            <h2 className="text-[1.0625rem] font-bold">確認リスト</h2>
+            <h2 className="text-[1rem] font-bold">確認リスト</h2>
             {data.entries.length === 0 ? (
               <p className="text-sm text-muted">この日の確認リストはありません。</p>
             ) : (
@@ -110,18 +110,20 @@ export default function DayPage() {
                 </div>
                 <ul>
                   {data.entries.map((entry) => (
-                    <li key={entry.id} className="flex items-center border-t border-border py-1.5">
-                      <span className="min-w-0 flex-1 pr-1 pl-2 leading-snug">{entry.body}</span>
-                      {SLOTS.map((s) => {
-                        const checks = data.checks.filter((c) => c.entry_id === entry.id && c.slot === s.slot);
-                        const isMine = checks.some((c) => c.user_id === myId);
-                        return (
-                          <span key={s.slot} className="flex w-12 shrink-0 flex-col items-center" aria-label={`${s.name}：${checks.length}人`}>
-                            <StampIcon slot={s.slot} state={isMine ? "mine" : checks.length > 0 ? "others" : "none"} size={26} />
-                            <span className="h-4 text-xs leading-4 text-muted">{checks.length || ""}</span>
-                          </span>
-                        );
-                      })}
+                    <li key={entry.id} className="flex flex-wrap items-center justify-end border-t border-border py-1.5">
+                      <span className="min-w-0 flex-1 basis-[10em] pr-1 pl-2 text-[1rem] leading-snug">{entry.body}</span>
+                      <span className="flex shrink-0">
+                        {SLOTS.map((s) => {
+                          const checks = data.checks.filter((c) => c.entry_id === entry.id && c.slot === s.slot);
+                          const isMine = checks.some((c) => c.user_id === myId);
+                          return (
+                            <span key={s.slot} className="flex w-12 shrink-0 flex-col items-center" aria-label={`${s.name}：${checks.length}人`}>
+                              <StampIcon slot={s.slot} state={isMine ? "mine" : checks.length > 0 ? "others" : "none"} size={26} />
+                              <span className="h-4 text-xs leading-4 text-muted">{checks.length || ""}</span>
+                            </span>
+                          );
+                        })}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -131,7 +133,7 @@ export default function DayPage() {
 
           <section className="flex flex-col gap-3">
             <div>
-              <h2 className="text-[1.0625rem] font-bold">振り返り</h2>
+              <h2 className="text-[1rem] font-bold">振り返り</h2>
               <p className="text-sm text-muted"><Phrases text="書かなくても大丈夫です。書きたい日に、書きたいことだけ。" /></p>
             </div>
 

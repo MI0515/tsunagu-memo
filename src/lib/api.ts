@@ -130,6 +130,13 @@ export async function deleteMemo(memoId: string) {
   if (error) throw toAppError(error);
 }
 
+// 並び替え：「up」1つ上へ／「down」1つ下へ／「top」いちばん上へ
+export type MoveTo = "up" | "down" | "top";
+export const moveMemoItem = (itemId: string, to: MoveTo) =>
+  rpc<{ moved: boolean }>("move_memo_item", { p_item_id: itemId, p_to: to });
+export const moveMemo = (memoId: string, to: MoveTo) =>
+  rpc<{ moved: boolean }>("move_memo", { p_memo_id: memoId, p_to: to });
+
 export async function addMemoItem(memo: Memo, body: string, position: number) {
   const { error } = await getSupabase()
     .from("memo_items").insert({ memo_id: memo.id, room_id: memo.room_id, body, position });

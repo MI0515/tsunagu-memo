@@ -32,7 +32,7 @@ export function TabBar() {
                   active ? "font-bold text-primary" : "text-muted"
                 }`}
               >
-                <span aria-hidden className={`text-[1.375rem] leading-none ${active ? "" : "opacity-60 grayscale"}`}>
+                <span aria-hidden className={`text-[1.2941rem] leading-none ${active ? "" : "opacity-60 grayscale"}`}>
                   {tab.icon}
                 </span>
                 {tab.label}

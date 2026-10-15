@@ -221,7 +221,7 @@ export function EmptyState({ title, body }: { title: string; body?: string }) {
 export function SectionTitle({ children, sub }: { children: ReactNode; sub?: string }) {
   return (
     <div>
-      <h2 className="text-[1.0625rem] font-bold leading-snug">{children}</h2>
+      <h2 className="text-[1rem] font-bold leading-snug">{children}</h2>
       {sub && <p className="text-sm text-muted"><Phrases text={sub} /></p>}
     </div>
   );

@@ -126,29 +126,34 @@ export default function TodayPage() {
           )}
           <ul>
             {day.entries.map((entry) => (
-              <li key={entry.id} className="flex items-center border-t border-border py-1">
+              <li key={entry.id} className="flex flex-wrap items-center justify-end border-t border-border py-1">
                 <button
                   onClick={() => {
                     tapFeedback();
                     setOpenEntryId(entry.id);
                   }}
-                  className="min-h-12 min-w-0 flex-1 py-2 pr-1 pl-2 text-left leading-snug"
+                  className="min-h-12 min-w-0 flex-1 basis-[10em] py-2 pr-1 pl-2 text-left text-[1rem] leading-snug"
                 >
                   {entry.body}
                 </button>
-                {isToday && SLOTS.map((s) => {
-                  const checks = day.checks.filter((c) => c.entry_id === entry.id && c.slot === s.slot);
-                  return (
-                    <StampButton
-                      key={s.slot}
-                      slot={s.slot}
-                      count={checks.length}
-                      mine={checks.some((c) => c.user_id === myId)}
-                      label={`「${entry.body}」の${s.name}`}
-                      onPress={() => toggle(entry, s.slot)}
-                    />
-                  );
-                })}
+                {/* ☀️と🌙はひとまとまりにして、下の段に回る時も一緒に動かす */}
+                {isToday && (
+                  <span className="flex shrink-0">
+                    {SLOTS.map((s) => {
+                      const checks = day.checks.filter((c) => c.entry_id === entry.id && c.slot === s.slot);
+                      return (
+                        <StampButton
+                          key={s.slot}
+                          slot={s.slot}
+                          count={checks.length}
+                          mine={checks.some((c) => c.user_id === myId)}
+                          label={`「${entry.body}」の${s.name}`}
+                          onPress={() => toggle(entry, s.slot)}
+                        />
+                      );
+                    })}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

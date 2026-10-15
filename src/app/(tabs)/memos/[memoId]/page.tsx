@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Alert, Button, ConfirmSheet, EmptyState, Field, LinkButton, Loading, PageTitle, Phrases, Sheet, TextArea } from "@/components/ui";
+import { MoveButtons, moveInList } from "@/components/MoveButtons";
 import { useRoom } from "@/components/rooms";
 import {
-  addMemoItem, addToDay, deleteMemo, deleteMemoItem, deleteSet, getMemo, lastSelection, listSets, memoItemsInDays, saveSet,
-  updateMemo, updateMemoItem,
+  addMemoItem, addToDay, deleteMemo, deleteMemoItem, deleteSet, getMemo, lastSelection, listSets, memoItemsInDays, moveMemoItem,
+  saveSet, updateMemo, updateMemoItem, type MoveTo,
 } from "@/lib/api";
 import { addDays } from "@/lib/date";
 import { errorMessage } from "@/lib/errors";
@@ -38,6 +39,9 @@ export default function MemoPage() {
   const [inDays, setInDays] = useState<{ date: string; memo_item_id: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("read");
+  // 「編集する」の中で、直す（false）か並び替える（true）か
+  const [sorting, setSorting] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<Notice | null>(null);
   const [busy, setBusy] = useState<"today" | "tomorrow" | "last" | null>(null);
@@ -73,7 +77,24 @@ export default function MemoPage() {
     if (room.id !== firstRoom.current) router.replace("/memos");
   }, [room.id, router]);
 
+  // 並び替え：画面で先に動かして見せ、データベースで保存する。失敗したら読み直す
+  async function move(itemId: string, to: MoveTo) {
+    if (!data) return;
+    setMoving(true);
+    setError(null);
+    setData({ ...data, items: moveInList(data.items, itemId, to) });
+    try {
+      await moveMemoItem(itemId, to);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setMoving(false);
+      load();
+    }
+  }
+
   function changeMode(next: Mode) {
+    setSorting(false);
     tapFeedback();
     setMode(next);
     setSelected(new Set());
@@ -156,7 +177,7 @@ export default function MemoPage() {
   const hint = {
     read: "項目をタップすると、コピーできます。",
     select: "思い出したい項目をタップして選んでください。",
-    edit: "直したい項目をタップしてください。",
+    edit: sorting ? "⤒ いちばん上へ、↑↓ で1つずつ動かせます。番号は自動で振り直されます。" : "直したい項目をタップしてください。",
   }[mode];
 
   return (
@@ -181,6 +202,26 @@ export default function MemoPage() {
 
       {error && <Alert>{error}</Alert>}
 
+      {mode === "edit" && items.length > 1 && (
+        <div role="group" aria-label="編集のしかた" className="grid grid-cols-2 rounded-full border-2 border-border p-0.5">
+          {([[false, "直す"], [true, "並び替える"]] as const).map(([value, label]) => (
+            <button
+              key={label}
+              onClick={() => {
+                tapFeedback();
+                setSorting(value);
+              }}
+              aria-pressed={sorting === value}
+              className={`min-h-10 whitespace-nowrap rounded-full text-sm font-bold transition-colors ${
+                sorting === value ? "bg-primary text-on-primary" : "text-muted"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {items.length === 0 ? (
         <EmptyState title="項目は、まだありません。" body="「編集する」から追加できます。" />
       ) : (
@@ -189,6 +230,24 @@ export default function MemoPage() {
             const copied = copiedId === item.id;
             const isSelected = mode === "select" && selected.has(item.id);
             const days = inDays.filter((d) => d.memo_item_id === item.id).map((d) => (d.date === today ? "今日" : "明日"));
+            if (mode === "edit" && sorting) {
+              return (
+                <li key={item.id} className="flex flex-wrap items-center justify-end gap-2 rounded-2xl border-2 border-dashed border-border bg-bg px-3 py-2 text-[0.8824rem] leading-normal">
+                  {/* 文に十分な幅（約12文字）がない時は、ボタンを下の段に回す */}
+                  <span className="flex min-w-0 flex-1 basis-[12em] gap-2">
+                    <span className="w-6 shrink-0 text-right font-bold text-primary tabular-nums">{index + 1}.</span>
+                    <span className="min-w-0 flex-1">{item.body}</span>
+                  </span>
+                  <MoveButtons
+                    label={item.body}
+                    first={index === 0}
+                    last={index === items.length - 1}
+                    busy={moving}
+                    onMove={(to) => move(item.id, to)}
+                  />
+                </li>
+              );
+            }
             return (
               <li key={item.id}>
                 <button
@@ -199,15 +258,15 @@ export default function MemoPage() {
                     else if (await copyText(item.body)) flash(item.id);
                   }}
                   aria-pressed={mode === "select" ? isSelected : undefined}
-                  className={`flex w-full items-start gap-2 rounded-2xl border-2 px-3 py-2.5 text-left transition-colors active:scale-[0.99] ${
+                  className={`flex w-full items-start gap-2 rounded-2xl border-2 px-3 py-2 text-left text-[0.8824rem] leading-normal transition-colors active:scale-[0.99] ${
                     copied || isSelected
                       ? "border-primary bg-primary-soft"
                       : mode === "edit" ? "border-dashed border-border bg-bg" : "border-transparent bg-surface"
                   }`}
                 >
                   {mode === "select" && <SelectMark on={isSelected} />}
-                  <span className="w-6 shrink-0 text-right font-bold leading-relaxed text-primary tabular-nums">{index + 1}.</span>
-                  <span className="min-w-0 flex-1 leading-relaxed">
+                  <span className="w-6 shrink-0 text-right font-bold text-primary tabular-nums">{index + 1}.</span>
+                  <span className="min-w-0 flex-1">
                     {item.body}
                     {(days.length > 0 || copied) && (
                       <span className="mt-1 flex flex-wrap gap-1">
@@ -218,7 +277,7 @@ export default function MemoPage() {
                       </span>
                     )}
                   </span>
-                  {mode === "edit" && <span aria-hidden className="shrink-0 leading-relaxed text-muted">✎</span>}
+                  {mode === "edit" && <span aria-hidden className="shrink-0 text-muted">✎</span>}
                 </button>
               </li>
             );
@@ -261,7 +320,7 @@ export default function MemoPage() {
         </div>
       )}
 
-      {mode === "edit" && (
+      {mode === "edit" && !sorting && (
         <div className="flex flex-col gap-3">
           {items.length >= LIMITS.itemsPerMemo ? (
             <p className="text-center text-sm text-muted">1つのメモの項目は{LIMITS.itemsPerMemo}個までです。</p>

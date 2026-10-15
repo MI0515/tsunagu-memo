@@ -204,7 +204,7 @@ export default function SettingsPage() {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Card className="flex flex-col gap-3">
-      <h2 className="text-[1.0625rem] font-bold">{title}</h2>
+      <h2 className="text-[1rem] font-bold">{title}</h2>
       {children}
     </Card>
   );

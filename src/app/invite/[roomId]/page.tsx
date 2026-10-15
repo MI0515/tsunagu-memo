@@ -79,7 +79,7 @@ function InviteContent() {
         </Card>
       )}
       <Card className="flex flex-col gap-4">
-        <h1 className="text-[1.0625rem] font-bold">招待リンク</h1>
+        <h1 className="text-[1rem] font-bold">招待リンク</h1>
         {url && invite ? (
           <>
             <p className="break-all rounded-2xl bg-bg p-4 text-sm text-muted">{url}</p>

@@ -57,6 +57,16 @@
   }
 }
 
+@theme {
+  --spacing: 0.2353rem;
+  --text-xs: 0.7059rem;
+  --text-sm: 0.8235rem;
+  --text-base: 0.9412rem;
+  --text-lg: 1.0588rem;
+  --text-xl: 1.1765rem;
+  --text-2xl: 1.4118rem;
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -75,19 +85,41 @@
 
 /*
   スマホを基準にした文字と余白の決まり（どの画面もこれに合わせる）
-  - 本文・ボタン・入力欄：16px（iPhoneで入力欄が拡大されない大きさ）
-  - 画面の見出し：20px（text-xl）／区切りの見出し：17px（text-[1.0625rem]）
-  - 補足・日時：14px（text-sm）／人数などの数字：12px（text-xs）
-  - 押せる場所：高さ44px以上。主なボタンは48px
-  - 画面の左右の余白：16px／カードの内側：16px
+  基準の大きさは、標準で17px（iPhoneのメモやメッセージの本文と同じ）。
+  - iPhone・iPad：「設定 → 画面表示と明るさ → テキストサイズ」に合わせて、基準が大きく（小さく）なる
+  - そのほか：ブラウザの文字サイズ設定・ズームに合わせて変わる
+  大きさはすべて rem（基準に対する倍率）で指定し、標準の設定で次の大きさになるようにしている。
+  - 確認リストの文：17px（text-[1rem]）
+  - 本文・ボタン：16px（text-base）／メモの項目：15px（text-[0.8824rem]）
+  - 画面の見出し：20px（text-xl）／区切りの見出し：17px（text-[1rem]）
+  - 補足・説明文：14px（text-sm）／人数などの数字：12px（text-xs）
+  - 入力欄：どんな設定でも16px以上（iPhoneのSafariで拡大されないため）
+  - 押せる場所：高さ44px以上。主なボタンは48px（余白の単位も基準に合わせて大きくなる）
+  - 画面の左右の余白とカードの内側：16px
 */
 :root {
-  --tabbar-height: 3.75rem;
+  --tabbar-height: 3.5294rem;
 }
 
 html {
-  font-size: 16px;
+  font-size: 106.25%;
   -webkit-text-size-adjust: 100%;
+}
+
+/* 指で操作する端末の Safari では、iPhone の文字サイズ設定に追従する（Mac の Safari は除く） */
+@media (hover: none) and (pointer: coarse) {
+  @supports (font: -apple-system-body) {
+    html {
+      font: -apple-system-body;
+    }
+  }
+}
+
+/* 入力欄は16px以上（どの設定でも、Safari が勝手に拡大しないように） */
+input,
+textarea,
+select {
+  font-size: max(16px, 0.9412rem);
 }
 
 body {

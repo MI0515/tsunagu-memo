@@ -60,7 +60,7 @@ export default function NoticePage() {
       <AppTitle sub="ご利用の前に" />
       {SECTIONS.map((s) => (
         <Card key={s.title} className="flex flex-col gap-2">
-          <h2 className="text-[1.0625rem] font-bold leading-snug">{s.title}</h2>
+          <h2 className="text-[1rem] font-bold leading-snug">{s.title}</h2>
           {s.body.map((p) => (
             <p key={p}>{p}</p>
           ))}
