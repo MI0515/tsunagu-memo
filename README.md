@@ -1,36 +1,127 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# つなぐメモ
 
-## Getting Started
+大切にしたいことを、一緒に何度でも思い出すための、スマホ向けの共有メモアプリです。
 
-First, run the development server:
+ルームごとに「大切にしたいこと」や「困ったときの具体策」をメモにしておき、その日に思い出したい項目を選んで、朝（☀️）と夜（🌙）に確かめます。押したスタンプはルームのメンバーにすぐ届き、それぞれが振り返りを書いて、読み合い、追記できます。
+
+タスク管理アプリではありません。「できた・できなかった」を数えるのではなく、意識し続けること、うまくいかなかった日も責めずに次につなげることを大切にしています。
+
+**デモ**：https://tsunagu-memo-demo.vercel.app
+「デモで試す」を押すと、見本の相手がいる見本ルームで、すぐに試せます（データは24時間で自動的に消えます）。
+
+<!-- スクリーンショット：あとで追加 -->
+
+---
+
+## つくった理由・こだわり
+
+<!--
+  ここは、作者が自分の言葉で書く部分です。
+  書くとよさそうなこと：
+  - このアプリで解決したかったこと（どんな場面で、何に困っていたか）
+  - 「タスク管理にしない」「責めない」「続けやすさを最優先」にした理由
+  - スタンプのデザイン（きらめきの印）や、言葉選びで大切にしたこと
+  - 実際に使ってみて変えたこと、使ってくれた人の声から変えたこと
+  - これからやりたいこと
+-->
+
+（作者が書きます）
+
+---
+
+## MVPでできること
+
+| 機能 | 内容 |
+|---|---|
+| ルーム | 少人数（最大6人）のルームを作り、招待リンク（7日間有効）で招待する。1人が複数のルームに入れる |
+| メモ | 見出しと説明つきのメモに、番号つきの短い項目を書いておく。項目はタップでコピーでき、定型文としても使える。「⤒ いちばん上へ」「↑」「↓」で並び替えられる |
+| 選んで追加 | メモから項目を選び、今日・明日の確認リストに追加する。「前回と同じ」や、名前を付けて保存したセットからも選べる |
+| 確認リスト | 項目ごとに☀️朝・🌙夜のスタンプ。押すとメンバーにすぐ届き、だれがいつ押したかも見られる。その日だけの項目も足せる |
+| 振り返り | 1日1人1つ書ける。ほかのメンバーが読んで追記できる。書いた人ごとに色・絵文字・名前で見分けられる |
+| ふりかえり | お気に入り（⭐）にした日の一覧、月ごとの一覧、言葉での検索 |
+| 引き継ぎ・復元 | メールアドレスを使わずに使える。ホーム画面のアプリへの引き継ぎコード、機種変更に備えた復元リンク |
+| 記録の書き出し | ルームの全記録を JSON（復元用）と CSV（Excel 用）で保存 |
+| そのほか | ホーム画面に追加できる（PWA）、ダークモード、初回ガイド、iPhone の文字サイズ設定への追従 |
+
+## 使った技術
+
+| 分野 | 技術 |
+|---|---|
+| フロントエンド | Next.js 15（App Router）、React 19、TypeScript、Tailwind CSS v4 |
+| バックエンド | Supabase（PostgreSQL、Row Level Security、Realtime、匿名ログイン） |
+| ホスティング | Vercel（本番とデモの2つ。毎日の定期実行に Vercel Cron） |
+| ロボット対策 | Cloudflare Turnstile |
+| テスト | PGlite（WebAssembly 版の PostgreSQL）で、移行ファイル・権限・DB関数を自動テスト |
+| 監視 | GitHub Actions（定期実行が止まっていないかの確認と、メール通知） |
+
+すべて無料の範囲で運用しています。
+
+## 仕組みと工夫
+
+### データを守る
+- **他のルームのデータは、データベース側で読めないようにしている**（Row Level Security）。画面のコードに誤りがあっても、他のルームの記録は見えない
+- 招待参加・引き継ぎ・並び替え・ルーム削除など、重要な操作は**データベースの関数**にまとめ、必要な人だけが呼べるように権限を絞っている
+- テーブルごとに、許す操作と、更新できる列を明示している。Supabase の「新しいテーブルを自動で公開する」設定が ON でも OFF でも、同じ権限になる
+- 招待トークン・引き継ぎコード・復元リンクの合言葉は、続けて失敗すると一時的にロックする。復元用の合言葉は、ハッシュにして保存している
+- 復元リンクの合言葉は URL の `#` の後ろに入れ、サーバーに送られないようにしている
+
+### メールアドレスを使わずに使える
+- Supabase の匿名ログインと、ルームのメンバー制を組み合わせている
+- iPhone では、Safari とホーム画面のアプリで保存場所が分かれる。そのため、Safari で発行した**引き継ぎコード**（10分・1回限り）で、同じ本人として続きから使えるようにした
+- 機種変更やデータ消去に備えて、自分専用の**復元リンク**を保存しておける
+
+### 無料で止まらずに運用する
+- Supabase の無料プランは、7日間使われないと一時停止する。Vercel Cron が毎日データベースに生存記録を書き、GitHub Actions が3日に1回それを確かめて、止まっていればメールが届くようにした
+- 自動バックアップがないので、利用者が自分で記録を書き出せるようにした
+- 使われないルームや空になったユーザーは、毎日の定期実行で自動的に整理する
+
+### スマホで、余裕がない時でも使える
+- まずスマホで設計し、320〜430px の幅、ライト・ダーク、文字を大きくした状態で確かめている
+- 文字の大きさは rem で指定し、iPhone の「テキストサイズ」設定に追従する。入力欄は、Safari で勝手に拡大されない 16px 以上を保つ
+- 文に十分な幅がない時は、ボタンやスタンプを文の下の段に回し、文が細切れにならないようにした
+- 並び替えは、スクロールと誤爆しやすいドラッグではなく、ボタンで1つずつ動かす。2人が同時に押しても、データベースの中で順番が崩れない
+
+### 見分けやすく、責めない見た目
+- スタンプはチェックマークではなく、オリジナルの「きらめきの印」。押していない状態を失敗に見せないよう、点線の輪郭にしている
+- メンバーの色は、色覚のタイプ（P型・D型・T型）ごとの見え方を計算で再現し、見分けにくい2色の差が大きくなるように選んだ。色だけに頼らず、絵文字と名前を必ず並べる
+
+### 本番とデモの分離
+- 同じコードを、環境変数で本番とデモに切り替えている
+- デモの見本データ作成と毎日のリセットは、データベースの設定が「デモ」の時しか動かない。本番で誤って動くことがない
+
+## 手元で動かす
+
+必要なもの：Node.js、Supabase のプロジェクト（無料プラン）
 
 ```bash
+npm install
+cp .env.example .env.local   # Supabase の URL・キーなどを入れる
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+データベースは、`supabase/migrations/` のファイルを、名前の順に Supabase の SQL Editor で実行します。正しく入ったかは `supabase/checks/verify_setup.sql` で確かめられます（「すべてOK」と表示されれば成功）。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run test:db:all   # データベースのテスト（ブラウザや Supabase なしで動く）
+npm run lint
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## フォルダの構成
 
-## Learn More
+```
+src/
+  app/(tabs)/        今日・メモ・ふりかえり・設定の画面
+  app/api/           毎日の定期実行（keep-alive）、デモの見本ルーム
+  components/        共通の部品（スタンプ、初回ガイドなど）
+  lib/               データの読み書き、日付、書き出しなど
+supabase/
+  migrations/        データベースの移行ファイル（追加のみで、書き換えない）
+  tests/             データベースの自動テスト
+  checks/            反映の確認・運用に使う、読むだけの SQL
+SPEC.md              仕様
+CLAUDE.md            開発の決まりごと
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 開発について
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+開発には Claude Code を使っています。仕様（`SPEC.md`）を一緒に練り、1つずつ手順を区切って、動作を確かめながら進めました。
